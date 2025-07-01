@@ -34,7 +34,10 @@ This API serves as the backend for the milkyano-barber-web frontend, replacing t
 All endpoints are prefixed with `/api/v1`.
 
 ### Authentication (`/api/v1/auth`)
-- `POST /request-otp` - Request OTP for phone number
+- `POST /register` - Register new customer (sends OTP)
+- `POST /register-admin` - Register new admin (requires X-Secret-Key header)
+- `POST /request-otp` - Resend OTP for existing user
+- `POST /forgot-password` - Request account recovery OTP
 - `POST /verify-otp` - Verify OTP and get tokens
 - `POST /refresh` - Refresh access token
 - `GET /me` - Get current user (authenticated)
@@ -190,11 +193,20 @@ Note: The system uses completely stateless JWT authentication. Both access and r
 
 ## Authentication Flow
 
-1. **Request OTP**: Client requests OTP, user created if new
-2. **Verify OTP**: Client verifies OTP code
-3. **Receive Tokens**: Client receives access token (1 day) and refresh token (90 days)
-4. **Use Access Token**: Client includes token in Authorization header
-5. **Refresh Token**: Client uses refresh token to get new access token
+### Customer Registration:
+1. **Register**: Client calls `/register` with user details
+2. **OTP Sent**: Backend creates Square customer, saves user, sends OTP
+3. **Verify OTP**: Client calls `/verify-otp` with phone and code
+4. **Receive Tokens**: Client receives JWT tokens (1 day access, 90 days refresh)
+
+### Admin Registration:
+1. **Register Admin**: Client calls `/register-admin` with X-Secret-Key header
+2. **Instant Access**: Admin created with verified status (no OTP required)
+
+### Existing User Login:
+1. **Request OTP**: Client calls `/request-otp` for existing user
+2. **Verify OTP**: Client calls `/verify-otp` with phone and code
+3. **Receive Tokens**: Client receives JWT tokens
 
 Both tokens are signed JWTs - no database storage is used for session management.
 

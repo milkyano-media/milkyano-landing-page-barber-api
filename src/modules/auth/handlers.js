@@ -1,11 +1,81 @@
 // src/modules/auth/handlers.js
 import AuthService from './service.js';
 
+async function register(request, reply) {
+  const authService = new AuthService(this.prisma);
+  
+  try {
+    const result = await authService.register(request.body);
+    return reply.code(201).send(result);
+  } catch (error) {
+    request.log.error(error);
+    
+    if (error.statusCode) {
+      return reply.code(error.statusCode).send({ 
+        error: error.message 
+      });
+    }
+    
+    return reply.code(500).send({ 
+      error: 'Internal server error' 
+    });
+  }
+}
+
+async function registerAdmin(request, reply) {
+  // Validate X-Secret-Key header
+  const secretKey = request.headers['x-secret-key'];
+  
+  if (!secretKey || secretKey !== process.env.X_SECRET_KEY) {
+    return reply.code(401).send({ error: 'Unauthorized' });
+  }
+  
+  const authService = new AuthService(this.prisma);
+  
+  try {
+    const result = await authService.registerAdmin(request.body);
+    return reply.code(201).send(result);
+  } catch (error) {
+    request.log.error(error);
+    
+    if (error.statusCode) {
+      return reply.code(error.statusCode).send({ 
+        error: error.message 
+      });
+    }
+    
+    return reply.code(500).send({ 
+      error: 'Internal server error' 
+    });
+  }
+}
+
 async function requestOTP(request, reply) {
   const authService = new AuthService(this.prisma);
   
   try {
-    const result = await authService.requestOTP(request.body);
+    const result = await authService.requestOTP(request.body.phoneNumber);
+    return reply.code(200).send(result);
+  } catch (error) {
+    request.log.error(error);
+    
+    if (error.statusCode) {
+      return reply.code(error.statusCode).send({ 
+        error: error.message 
+      });
+    }
+    
+    return reply.code(500).send({ 
+      error: 'Internal server error' 
+    });
+  }
+}
+
+async function forgotPassword(request, reply) {
+  const authService = new AuthService(this.prisma);
+  
+  try {
+    const result = await authService.forgotPassword(request.body.phoneNumber);
     return reply.code(200).send(result);
   } catch (error) {
     request.log.error(error);
@@ -106,7 +176,10 @@ async function getMe(request, reply) {
 }
 
 export {
+  register,
+  registerAdmin,
   requestOTP,
+  forgotPassword,
   verifyOTP,
   refreshToken,
   getMe

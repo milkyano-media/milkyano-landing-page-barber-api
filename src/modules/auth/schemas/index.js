@@ -1,6 +1,6 @@
 // src/modules/auth/schemas/index.js
 
-export const requestOTPSchema = {
+export const registerSchema = {
   body: {
     type: 'object',
     required: ['phoneNumber', 'firstName', 'lastName'],
@@ -29,12 +29,107 @@ export const requestOTPSchema = {
     }
   },
   response: {
+    201: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string' },
+        phoneNumber: { type: 'string' },
+        message: { type: 'string' }
+      }
+    }
+  }
+};
+
+export const registerAdminSchema = {
+  headers: {
+    type: 'object',
+    required: ['x-secret-key'],
+    properties: {
+      'x-secret-key': {
+        type: 'string',
+        description: 'Secret key for admin registration'
+      }
+    }
+  },
+  body: {
+    type: 'object',
+    required: ['phoneNumber', 'firstName', 'lastName', 'email'],
+    properties: {
+      phoneNumber: {
+        type: 'string',
+        pattern: '^[0-9+\\-() ]+$',
+        minLength: 10,
+        maxLength: 20
+      },
+      firstName: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 100
+      },
+      lastName: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 100
+      },
+      email: {
+        type: 'string',
+        format: 'email',
+        maxLength: 255
+      }
+    }
+  },
+  response: {
+    201: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string' },
+        phoneNumber: { type: 'string' },
+        message: { type: 'string' }
+      }
+    }
+  }
+};
+
+export const requestOTPSchema = {
+  body: {
+    type: 'object',
+    required: ['phoneNumber'],
+    properties: {
+      phoneNumber: {
+        type: 'string',
+        pattern: '^[0-9+\\-() ]+$',
+        minLength: 10,
+        maxLength: 20
+      }
+    }
+  },
+  response: {
     200: {
       type: 'object',
       properties: {
-        status: { type: 'string' },
-        phoneNumber: { type: 'string' },
-        userId: { type: 'string' },
+        message: { type: 'string' }
+      }
+    }
+  }
+};
+
+export const forgotPasswordSchema = {
+  body: {
+    type: 'object',
+    required: ['phoneNumber'],
+    properties: {
+      phoneNumber: {
+        type: 'string',
+        pattern: '^[0-9+\\-() ]+$',
+        minLength: 10,
+        maxLength: 20
+      }
+    }
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: {
         message: { type: 'string' }
       }
     }

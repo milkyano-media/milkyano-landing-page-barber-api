@@ -1,85 +1,183 @@
 // src/modules/auth/service.js
-import { SquareClient } from "square";
+import { getSquareClient } from "../square/utils/client.js";
 import twilioService from "./utils/twilio.js";
 import { AppError } from "../../utils/errors.js";
 
 export default class AuthService {
-  constructor(prisma, squareClient) {
+  constructor(prisma) {
     this.prisma = prisma;
-    this.squareClient =
-      squareClient ||
-      new SquareClient({
-        token: process.env.SQUARE_ACCESS_TOKEN
-      });
+    this.squareClient = getSquareClient();
   }
 
   /**
-   * Request OTP for phone number
-   * @param {string} phoneNumber - Phone number to send OTP to
-   * @param {string} firstName - User's first name (for new users)
-   * @param {string} lastName - User's last name (for new users)
-   * @param {string} email - User's email (optional)
-   * @returns {Promise<Object>} OTP request status
+   * Register new customer
+   * @param {Object} data - Registration data
+   * @returns {Promise<Object>} User data with OTP sent status
    */
-  async requestOTP({ phoneNumber, firstName, lastName, email }) {
+  async register({ phoneNumber, firstName, lastName, email }) {
     const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
 
-    // Check if user exists
-    let user = await this.prisma.user.findUnique({
+    // Check if user already exists
+    const existingUser = await this.prisma.user.findUnique({
       where: { phoneNumber: formattedPhone }
     });
 
-    // If user doesn't exist, create a new customer user
-    if (!user) {
-      // Check if email is already taken
-      if (email) {
-        const existingEmailUser = await this.prisma.user.findUnique({
-          where: { email }
-        });
+    if (existingUser) {
+      throw new AppError("Phone number already registered", 400);
+    }
 
-        if (existingEmailUser) {
-          throw new AppError("Email already registered", 400);
-        }
-      }
-
-      // Create customer in Square
-      let squareCustomerId = null;
-      try {
-        const { result } = await this.squareClient.customersApi.createCustomer({
-          givenName: firstName,
-          familyName: lastName,
-          phoneNumber: formattedPhone,
-          emailAddress: email || undefined
-        });
-
-        squareCustomerId = result.customer.id;
-      } catch (error) {
-        console.error("Square customer creation error:", error);
-        // Continue without Square customer ID for now
-      }
-
-      // Create user in database
-      user = await this.prisma.user.create({
-        data: {
-          id: squareCustomerId || undefined, // Use Square customer ID as user ID if available
-          phoneNumber: formattedPhone,
-          firstName,
-          lastName,
-          email: email || null,
-          role: "CUSTOMER",
-          isVerified: false
-        }
+    // Check if email is already taken
+    if (email) {
+      const existingEmailUser = await this.prisma.user.findUnique({
+        where: { email }
       });
+
+      if (existingEmailUser) {
+        throw new AppError("Email already registered", 400);
+      }
+    }
+
+    // Create customer in Square
+    let squareCustomerId = null;
+    try {
+      const { result } = await this.squareClient.customersApi.createCustomer({
+        givenName: firstName,
+        familyName: lastName,
+        phoneNumber: formattedPhone,
+        emailAddress: email || undefined
+      });
+
+      squareCustomerId = result.customer.id;
+    } catch (error) {
+      console.error("Square customer creation error:", error);
+      // Continue without Square customer ID for now
+    }
+
+    // Create user in database
+    const user = await this.prisma.user.create({
+      data: {
+        id: squareCustomerId || undefined, // Use Square customer ID as user ID if available
+        phoneNumber: formattedPhone,
+        firstName,
+        lastName,
+        email: email || null,
+        role: "CUSTOMER",
+        isVerified: false
+      }
+    });
+
+    // Send OTP
+    await twilioService.sendOTP(phoneNumber);
+
+    return {
+      userId: user.id,
+      phoneNumber: formattedPhone,
+      message: "Registration successful. OTP sent."
+    };
+  }
+
+  /**
+   * Register new admin (no OTP required)
+   * @param {Object} data - Registration data
+   * @returns {Promise<Object>} Admin user data
+   */
+  async registerAdmin({ phoneNumber, firstName, lastName, email }) {
+    const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
+
+    // Check if user already exists
+    const existingUser = await this.prisma.user.findUnique({
+      where: { phoneNumber: formattedPhone }
+    });
+
+    if (existingUser) {
+      throw new AppError("Phone number already registered", 400);
+    }
+
+    // Check if email is already taken
+    const existingEmailUser = await this.prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingEmailUser) {
+      throw new AppError("Email already registered", 400);
+    }
+
+    // Create admin user in database (no Square customer)
+    const admin = await this.prisma.user.create({
+      data: {
+        phoneNumber: formattedPhone,
+        firstName,
+        lastName,
+        email,
+        role: "ADMIN",
+        isVerified: true // Admins are instantly verified
+      }
+    });
+
+    return {
+      userId: admin.id,
+      phoneNumber: formattedPhone,
+      message: "Admin created successfully"
+    };
+  }
+
+  /**
+   * Request OTP for existing user only
+   * @param {string} phoneNumber - Phone number to send OTP to
+   * @returns {Promise<Object>} OTP request status
+   */
+  async requestOTP(phoneNumber) {
+    const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
+
+    // Check if user exists
+    const user = await this.prisma.user.findUnique({
+      where: { phoneNumber: formattedPhone }
+    });
+
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+
+    // Only allow OTP for customers
+    if (user.role !== "CUSTOMER") {
+      throw new AppError("OTP not available for this user type", 403);
     }
 
     // Send OTP
-    const otpResult = await twilioService.sendOTP(phoneNumber);
+    await twilioService.sendOTP(phoneNumber);
 
     return {
-      status: "sent",
-      phoneNumber: formattedPhone,
-      userId: user.id,
       message: "OTP sent successfully"
+    };
+  }
+
+  /**
+   * Forgot password - send OTP to existing customer
+   * @param {string} phoneNumber - Phone number
+   * @returns {Promise<Object>} OTP sent status
+   */
+  async forgotPassword(phoneNumber) {
+    const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
+
+    // Check if user exists
+    const user = await this.prisma.user.findUnique({
+      where: { phoneNumber: formattedPhone }
+    });
+
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+
+    // Only allow for customers
+    if (user.role !== "CUSTOMER") {
+      throw new AppError("Password reset not available for this user type", 403);
+    }
+
+    // Send OTP
+    await twilioService.sendOTP(phoneNumber);
+
+    return {
+      message: "OTP sent for account recovery"
     };
   }
 
