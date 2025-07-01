@@ -1,103 +1,190 @@
 // src/modules/auth/service.js
-import bcrypt from 'bcrypt';
-import { createUnauthorizedError, createBadRequestError, createForbiddenError } from '../../utils/errors.js';
+import { SquareClient } from "square";
+import twilioService from "./utils/twilio.js";
+import { AppError } from "../../utils/errors.js";
 
 export default class AuthService {
-  constructor(prisma) {
+  constructor(prisma, squareClient) {
     this.prisma = prisma;
+    this.squareClient =
+      squareClient ||
+      new SquareClient({
+        token: process.env.SQUARE_ACCESS_TOKEN
+      });
   }
 
-  async register(userData, role = 'CUSTOMER') {
-    // Check if user already exists
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: userData.email }
+  /**
+   * Request OTP for phone number
+   * @param {string} phoneNumber - Phone number to send OTP to
+   * @param {string} firstName - User's first name (for new users)
+   * @param {string} lastName - User's last name (for new users)
+   * @param {string} email - User's email (optional)
+   * @returns {Promise<Object>} OTP request status
+   */
+  async requestOTP({ phoneNumber, firstName, lastName, email }) {
+    const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
+
+    // Check if user exists
+    let user = await this.prisma.user.findUnique({
+      where: { phoneNumber: formattedPhone }
     });
 
-    if (existingUser) {
-      throw createBadRequestError('User with this email already exists');
+    // If user doesn't exist, create a new customer user
+    if (!user) {
+      // Check if email is already taken
+      if (email) {
+        const existingEmailUser = await this.prisma.user.findUnique({
+          where: { email }
+        });
+
+        if (existingEmailUser) {
+          throw new AppError("Email already registered", 400);
+        }
+      }
+
+      // Create customer in Square
+      let squareCustomerId = null;
+      try {
+        const { result } = await this.squareClient.customersApi.createCustomer({
+          givenName: firstName,
+          familyName: lastName,
+          phoneNumber: formattedPhone,
+          emailAddress: email || undefined
+        });
+
+        squareCustomerId = result.customer.id;
+      } catch (error) {
+        console.error("Square customer creation error:", error);
+        // Continue without Square customer ID for now
+      }
+
+      // Create user in database
+      user = await this.prisma.user.create({
+        data: {
+          id: squareCustomerId || undefined, // Use Square customer ID as user ID if available
+          phoneNumber: formattedPhone,
+          firstName,
+          lastName,
+          email: email || null,
+          role: "CUSTOMER",
+          isVerified: false
+        }
+      });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    // Send OTP
+    const otpResult = await twilioService.sendOTP(phoneNumber);
 
-    // Create user with specified role
-    const user = await this.prisma.user.create({
-      data: {
-        email: userData.email,
-        password: hashedPassword,
-        name: userData.name,
-        role: role
-      }
-    });
-
-    // Remove password from response
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return {
+      status: "sent",
+      phoneNumber: formattedPhone,
+      userId: user.id,
+      message: "OTP sent successfully"
+    };
   }
 
-  async registerAdmin(userData, role = 'ADMIN') {
-    // This is a separate method to register admins (can only be called by SUPER_ADMINs)
-    return this.register(userData, role);
-  }
+  /**
+   * Verify OTP and return tokens
+   * @param {string} phoneNumber - Phone number that received OTP
+   * @param {string} otpCode - OTP code to verify
+   * @returns {Promise<Object>} User and tokens
+   */
+  async verifyOTP({ phoneNumber, otpCode }) {
+    const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
 
-  async registerSuperAdmin(userData) {
-    // This is a separate method to register super admins (requires special header)
-    return this.register(userData, 'SUPER_ADMIN');
-  }
+    // Verify OTP with Twilio
+    const verificationResult = await twilioService.verifyOTP(
+      phoneNumber,
+      otpCode
+    );
 
-  async login(email, password) {
+    if (!verificationResult.valid) {
+      throw new AppError("Invalid or expired OTP", 400);
+    }
+
     // Find user
     const user = await this.prisma.user.findUnique({
-      where: { email }
+      where: { phoneNumber: formattedPhone }
     });
 
     if (!user) {
-      throw createUnauthorizedError('Invalid email or password');
+      throw new AppError("User not found", 404);
     }
 
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    
-    if (!isPasswordValid) {
-      throw createUnauthorizedError('Invalid email or password');
+    // Update user as verified
+    if (!user.isVerified) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { isVerified: true }
+      });
+      user.isVerified = true;
     }
 
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return user;
   }
 
-  async updateUserRole(userId, newRole, currentUserRole) {
-    // Only SUPER_ADMIN can update to any role
-    // ADMIN can only update CUSTOMER roles
-    if (currentUserRole !== 'SUPER_ADMIN' && 
-        (newRole === 'SUPER_ADMIN' || newRole === 'ADMIN')) {
-      throw createForbiddenError('Insufficient permissions to assign this role');
-    }
-
-    // Find user to update
-    const userToUpdate = await this.prisma.user.findUnique({
+  /**
+   * Get user by ID
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} User object
+   */
+  async getUser(userId) {
+    const user = await this.prisma.user.findUnique({
       where: { id: userId }
     });
 
-    if (!userToUpdate) {
-      throw createBadRequestError('User not found');
+    if (!user) {
+      throw new AppError("User not found", 404);
     }
 
-    // ADMIN cannot change roles of other ADMINs or SUPER_ADMINs
-    if (currentUserRole === 'ADMIN' && 
-       (userToUpdate.role === 'ADMIN' || userToUpdate.role === 'SUPER_ADMIN')) {
-      throw createForbiddenError('Cannot modify users with equal or higher role');
+    return user;
+  }
+
+  /**
+   * Update user profile
+   * @param {string} userId - User ID
+   * @param {Object} updates - Profile updates
+   * @returns {Promise<Object>} Updated user
+   */
+  async updateProfile(userId, { firstName, lastName, email }) {
+    // Check if email is already taken by another user
+    if (email) {
+      const existingEmailUser = await this.prisma.user.findFirst({
+        where: {
+          email,
+          NOT: { id: userId }
+        }
+      });
+
+      if (existingEmailUser) {
+        throw new AppError("Email already registered", 400);
+      }
     }
 
-    // Update the role
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
-      data: { role: newRole }
+      data: {
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        email: email || undefined
+      }
     });
 
-    // Remove password from response
-    const { password, ...userWithoutPassword } = updatedUser;
-    return userWithoutPassword;
+    // Update Square customer if user has Square ID
+    if (updatedUser.id.length > 10) {
+      // Square IDs are longer than UUIDs
+      try {
+        await this.squareClient.customersApi.updateCustomer(updatedUser.id, {
+          givenName: updatedUser.firstName,
+          familyName: updatedUser.lastName,
+          emailAddress: updatedUser.email || undefined
+        });
+      } catch (error) {
+        console.error("Square customer update error:", error);
+        // Continue even if Square update fails
+      }
+    }
+
+    return updatedUser;
   }
 }

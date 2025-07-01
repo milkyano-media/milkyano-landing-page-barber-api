@@ -1,33 +1,79 @@
-# Fastify API Template
+# Barber Core API
 
-Modern, modular Fastify API template with JWT authentication, PostgreSQL, and Prisma ORM. Features a clean architecture with service layers, route validation, comprehensive error handling, and role-based access control.
+Core API for Milkyano Barber booking system with OTP authentication and Square integration.
 
-## Features
+## Overview
 
-- **Modular Architecture**: Domain-based structure for better maintainability
-- **JWT Authentication**: Built-in auth with register, login, and protected routes
-- **Role-Based Access Control (RBAC)**: Three user roles (CUSTOMER, ADMIN, SUPER_ADMIN) with different permissions
-- **PostgreSQL + Prisma ORM**: Type-safe database access with easy migrations
-- **Schema Validation**: Request and response validation using JSON Schema
-- **Swagger Documentation**: Auto-generated API docs available at `/documentation`
-- **Error Handling**: Standardized error responses
-- **Logging**: Structured logging with Logtail support
-- **Environment Configuration**: Easy environment management
-- **API Prefix**: All endpoints are prefixed with `/api` for clarity
-- **Clean Separation**: Routes, handlers, services, and schemas are separated for better code organization
+This API serves as the backend for the milkyano-barber-web frontend, replacing the older milkyano-barber-api. It provides:
+
+- OTP-based authentication using Twilio Verify
+- Direct Square API integration for bookings
+- Customer profile management
+- JWT authentication with refresh tokens
+
+## Key Features
+
+- **OTP Authentication**: Phone number verification using Twilio Verify service
+- **Square Integration**: Direct integration with Square APIs for bookings, barbers, and services
+- **Completely Stateless JWT**: 1-day access tokens with 90-day refresh tokens (both as signed JWTs)
+- **Customer Management**: Profile management and booking history
+- **Trust-Based Security**: Designed for Australian market with long-lived tokens
+
+## Tech Stack
+
+- **Framework**: Fastify v5 (ESM modules)
+- **Database**: PostgreSQL with Prisma ORM v6
+- **Authentication**: JWT with refresh tokens
+- **External Services**: 
+  - Square API for booking management
+  - Twilio Verify for OTP
+- **Documentation**: Swagger UI at `/documentation`
+
+## API Endpoints
+
+All endpoints are prefixed with `/api/v1`.
+
+### Authentication (`/api/v1/auth`)
+- `POST /request-otp` - Request OTP for phone number
+- `POST /verify-otp` - Verify OTP and get tokens
+- `POST /refresh` - Refresh access token
+- `GET /me` - Get current user (authenticated)
+
+### Square Integration (`/api/v1`)
+- `GET /barbers` - List all barbers
+- `GET /barbers/:id` - Get barber details
+- `GET /services` - List all services
+- `POST /availability` - Check availability
+- `POST /bookings` - Create booking (authenticated)
+- `GET /bookings/:id` - Get booking details (authenticated)
+- `POST /bookings/:id/cancel` - Cancel booking (authenticated)
+
+### Customer Management (`/api/v1/customers`)
+- `GET /profile` - Get customer profile (authenticated)
+- `PUT /profile` - Update customer profile (authenticated)
+- `GET /bookings` - Get customer bookings (authenticated)
+- `GET /statistics` - Get customer statistics (authenticated)
+
+### Cache Management (`/api/v1/cache`) - Admin only
+- `DELETE /all` - Clear all cache
+- `DELETE /key` - Clear specific cache key
+- `DELETE /pattern` - Clear cache keys matching pattern
+- `GET /stats` - Get cache statistics
 
 ## Prerequisites
 
-- Node.js 16+
-- PostgreSQL
+- Node.js 18+
+- PostgreSQL 14+
+- Twilio account with Verify service
+- Square account with API access
 
 ## Getting Started
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/fastify-api-template.git
-cd fastify-api-template
+git clone <repository-url>
+cd barber-core-api
 ```
 
 ### 2. Install dependencies
@@ -38,50 +84,43 @@ npm install
 
 ### 3. Configure environment variables
 
-Copy the `.env.example` file to `.env` and update it with your configuration:
+Copy `.env.example` to `.env` and fill in your values:
 
 ```bash
 cp .env.example .env
 ```
 
-```
-# Database
-DATABASE_URL="postgresql://postgres:password@localhost:5432/fastify_db"
-
-# JWT
-JWT_SECRET="your-secret-jwt-token-for-authentication"
-
-# Logger
-LOGTAIL_SOURCE_TOKEN=
-LOGTAIL_INGESTING_HOST=logs.betterstack.com
-LOGGER_FILE=server.log
-
-# Server
-PORT=3000
-
-# RBAC
-SUPER_ADMIN_KEY="your-super-secret-key-for-creating-super-admin"
-```
-
-Make sure to set a secure, random value for JWT_SECRET and SUPER_ADMIN_KEY.
+Key environment variables:
+- `DB_HOST` - PostgreSQL host (default: localhost)
+- `DB_PORT` - PostgreSQL port (default: 5432)
+- `DB_NAME` - Database name (default: barber_core_api_db)
+- `DB_USER` - Database user (default: postgres)
+- `DB_PASSWORD` - Database password
+- `JWT_SECRET` - Secret for access tokens
+- `JWT_REFRESH_TOKEN_SECRET` - Secret for refresh tokens
+- `SQUARE_ACCESS_TOKEN` - Square API token
+- `SQUARE_LOCATION_ID` - Square location ID
+- `TWILIO_ACCOUNT_SID` - Twilio account SID
+- `TWILIO_AUTH_TOKEN` - Twilio auth token
+- `TWILIO_SMS_SID` - Twilio Verify service SID
 
 ### 4. Set up the database
 
-Make sure PostgreSQL is running and create a database:
-
-```bash
-createdb fastify_db
-```
-
-Run the Prisma migrations:
+Run Prisma migrations:
 
 ```bash
 npm run db:migrate
 ```
 
+Seed the database (optional):
+
+```bash
+npm run db:seed
+```
+
 ### 5. Start the server
 
-Development mode with hot reloading:
+Development mode:
 
 ```bash
 npm run dev
@@ -93,96 +132,83 @@ Production mode:
 npm start
 ```
 
-## Role-Based Access Control
-
-This template implements role-based access control with three user roles:
-
-- **CUSTOMER**: Regular users with basic permissions
-- **ADMIN**: Administrative users with elevated permissions
-- **SUPER_ADMIN**: Top-level administrators with full access
-
-### Creating a Super Admin
-
-To create a Super Admin, send a POST request to `/api/auth/super-admin` with the special header:
-
-```bash
-X-Super-Admin-Key: your-super-secret-key-from-env
-```
-
-This header must match the SUPER_ADMIN_KEY value in your .env file.
-
-### Role Permissions
-
-| Action | CUSTOMER | ADMIN | SUPER_ADMIN |
-|--------|----------|-------|-------------|
-| Register/Login | ✓ | ✓ | ✓ |
-| View Products | ✓ | ✓ | ✓ |
-| Create/Edit Products | ✗ | ✓ | ✓ |
-| Delete Products | ✗ | ✗ | ✓ |
-| Create Admins | ✗ | ✗ | ✓ |
-| List Users | ✗ | ✓ | ✓ |
-| Change User Roles | ✗ | Limited | ✓ |
-
 ## Project Structure
 
 ```
 src/
 ├── modules/              # Business domain modules
-│   ├── auth/             # Authentication module
-│   │   ├── routes.js     # Route definitions
-│   │   ├── handlers.js   # Request handlers
-│   │   ├── service.js    # Business logic
-│   │   └── schemas/      # Validation schemas
-│   │       └── index.js
-│   └── products/         # Products module
-│       ├── routes.js
-│       ├── handlers.js
-│       ├── service.js
-│       └── schemas/
-│           └── index.js
-├── plugins/              # Fastify plugins
-│   ├── prisma.js         # Database connection
-│   ├── jwt.js            # JWT authentication
-│   ├── rbac.js           # Role-based access control
-│   └── logger.js         # Logging configuration
-├── utils/                # Utilities
-│   └── errors.js         # Error handling
-├── prisma/               # Prisma ORM files
-│   └── schema.prisma     # Database schema
-├── app.js                # Application setup
-└── server.js             # Server entry point
+│   ├── auth/            # OTP authentication
+│   │   ├── routes.js    
+│   │   ├── handlers.js  
+│   │   ├── service.js   
+│   │   ├── schemas/     
+│   │   └── utils/       
+│   ├── square/          # Square API integration
+│   │   ├── routes.js    
+│   │   ├── handlers.js  
+│   │   ├── service.js   
+│   │   ├── schemas/     
+│   │   └── utils/       
+│   └── customers/       # Customer management
+│       ├── routes.js    
+│       ├── handlers.js  
+│       ├── service.js   
+│       └── schemas/     
+├── plugins/             # Fastify plugins
+│   ├── prisma.js        # Database connection
+│   ├── jwt.js           # JWT with refresh tokens
+│   ├── rbac.js          # Role-based access
+│   └── logger.js        # Logging configuration
+├── utils/               # Utilities
+│   └── errors.js        # Error handling
+├── prisma/              # Database files
+│   ├── schema.prisma    # Database schema
+│   └── seed.js          # Database seeding
+├── app.js               # Application setup
+└── server.js            # Server entry point
 ```
 
-## API Endpoints
+## Database Schema
 
-All endpoints are prefixed with `/api`.
+The API uses a simple User model for authentication:
 
-### Authentication
+```prisma
+model User {
+  id           String    @id @default(uuid())
+  role         Role      @default(CUSTOMER)
+  phoneNumber  String    @unique
+  email        String?   @unique
+  firstName    String
+  lastName     String
+  isVerified   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+```
 
-- `POST /api/auth/register` - Register as a customer (public)
-- `POST /api/auth/login` - Login and get JWT token (public)
-- `GET /api/auth/me` - Get current user info (requires authentication)
-- `POST /api/auth/admin` - Create admin user (requires SUPER_ADMIN role)
-- `POST /api/auth/super-admin` - Create super admin (requires special header)
-- `POST /api/auth/role` - Update user role (requires ADMIN or SUPER_ADMIN role)
-- `GET /api/auth/users` - List all users (requires ADMIN or SUPER_ADMIN role)
+Note: The system uses completely stateless JWT authentication. Both access and refresh tokens are signed JWTs with no database storage.
 
-### Products
+## Authentication Flow
 
-- `GET /api/products` - Get all products (public)
-- `GET /api/products/:id` - Get product by ID (public)
-- `POST /api/products` - Create a new product (requires ADMIN or SUPER_ADMIN role)
-- `PUT /api/products/:id` - Update a product (requires ADMIN or SUPER_ADMIN role)
-- `DELETE /api/products/:id` - Delete a product (requires SUPER_ADMIN role)
+1. **Request OTP**: Client requests OTP, user created if new
+2. **Verify OTP**: Client verifies OTP code
+3. **Receive Tokens**: Client receives access token (1 day) and refresh token (90 days)
+4. **Use Access Token**: Client includes token in Authorization header
+5. **Refresh Token**: Client uses refresh token to get new access token
 
-### Other Endpoints
+Both tokens are signed JWTs - no database storage is used for session management.
 
-- `GET /health` - Health check endpoint (not prefixed with /api)
-- `GET /documentation` - API documentation
+## Notes
+
+- Analytics is handled by the separate `barber-dash-api` service
+- This API focuses on customer-facing features only
+- Square customer IDs are used as user IDs when possible
+- Australian phone numbers are expected (+61 format)
+- No password storage - authentication is OTP-based
 
 ## Documentation
 
-The API documentation is available at `/documentation` when the server is running.
+API documentation is available at `/documentation` when the server is running.
 
 ## License
 

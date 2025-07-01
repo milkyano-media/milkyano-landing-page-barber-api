@@ -1,58 +1,65 @@
 // prisma/seed.js
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
   // Clear existing data
-  await prisma.product.deleteMany({});
   await prisma.user.deleteMany({});
   
   console.log('Seeding database...');
 
-  // Create a super admin user
-  const hashedPassword = await bcrypt.hash('password123', 10);
-  
-  const superAdmin = await prisma.user.create({
+  // Create sample admin user
+  const admin = await prisma.user.create({
     data: {
-      email: 'admin@example.com',
-      name: 'Super Admin',
-      password: hashedPassword,
-      role: 'SUPER_ADMIN'
+      phoneNumber: '+61400000001',
+      email: 'admin@milkyano.com',
+      firstName: 'Admin',
+      lastName: 'User',
+      role: 'ADMIN',
+      isVerified: true
     }
   });
   
-  console.log(`Created super admin user: ${superAdmin.email}`);
+  console.log(`Created admin user: ${admin.email}`);
 
-  // Create some sample products
-  const products = await Promise.all([
-    prisma.product.create({
+  // Create sample customer users
+  const customers = await Promise.all([
+    prisma.user.create({
       data: {
-        name: 'Classic Haircut',
-        description: 'Traditional haircut with scissors and clippers',
-        price: 25.99
+        phoneNumber: '+61400000002',
+        email: 'john.doe@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        role: 'CUSTOMER',
+        isVerified: true
       }
     }),
-    prisma.product.create({
+    prisma.user.create({
       data: {
-        name: 'Beard Trim',
-        description: 'Professional beard shaping and trimming',
-        price: 15.50
+        phoneNumber: '+61400000003',
+        email: 'jane.smith@example.com',
+        firstName: 'Jane',
+        lastName: 'Smith',
+        role: 'CUSTOMER',
+        isVerified: true
       }
     }),
-    prisma.product.create({
+    prisma.user.create({
       data: {
-        name: 'Deluxe Package',
-        description: 'Includes haircut, beard trim, and hot towel treatment',
-        price: 49.99
+        phoneNumber: '+61400000004',
+        firstName: 'Bob',
+        lastName: 'Wilson',
+        role: 'CUSTOMER',
+        isVerified: false // Unverified customer without email
       }
     })
   ]);
   
-  console.log(`Created ${products.length} sample products`);
+  console.log(`Created ${customers.length} sample customers`);
   
   console.log('Database seeding completed!');
+  console.log('\nNote: These are sample users. In production, users will be created via OTP verification.');
 }
 
 main()

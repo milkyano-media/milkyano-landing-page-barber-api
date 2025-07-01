@@ -1,116 +1,30 @@
 // src/modules/auth/schemas/index.js
 
-// Reusable user object schema
-const userSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'integer' },
-    email: { type: 'string' },
-    name: { type: 'string' },
-    role: { type: 'string', enum: ['CUSTOMER', 'ADMIN', 'SUPER_ADMIN'] },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' }
-  }
-};
-
-const registerSchema = {
+export const requestOTPSchema = {
   body: {
     type: 'object',
-    required: ['email', 'password'],
+    required: ['phoneNumber', 'firstName', 'lastName'],
     properties: {
-      email: { type: 'string', format: 'email' },
-      password: { type: 'string', minLength: 6 },
-      name: { type: 'string' }
-    }
-  },
-  response: {
-    201: {
-      type: 'object',
-      properties: {
-        user: userSchema,
-        token: { type: 'string' }
-      }
-    }
-  }
-};
-
-const registerAdminSchema = {
-  body: {
-    type: 'object',
-    required: ['email', 'password'],
-    properties: {
-      email: { type: 'string', format: 'email' },
-      password: { type: 'string', minLength: 6 },
-      name: { type: 'string' }
-    }
-  },
-  response: {
-    201: {
-      type: 'object',
-      properties: {
-        user: userSchema,
-        message: { type: 'string' }
-      }
-    }
-  }
-};
-
-const registerSuperAdminSchema = {
-  body: {
-    type: 'object',
-    required: ['email', 'password'],
-    properties: {
-      email: { type: 'string', format: 'email' },
-      password: { type: 'string', minLength: 6 },
-      name: { type: 'string' }
-    }
-  },
-  response: {
-    201: {
-      type: 'object',
-      properties: {
-        user: userSchema,
-        message: { type: 'string' }
-      }
-    }
-  }
-};
-
-const loginSchema = {
-  body: {
-    type: 'object',
-    required: ['email', 'password'],
-    properties: {
-      email: { type: 'string', format: 'email' },
-      password: { type: 'string' }
-    }
-  },
-  response: {
-    200: {
-      type: 'object',
-      properties: {
-        user: userSchema,
-        token: { type: 'string' }
-      }
-    }
-  }
-};
-
-const getMeSchema = {
-  response: {
-    200: userSchema
-  }
-};
-
-const updateRoleSchema = {
-  body: {
-    type: 'object',
-    required: ['userId', 'role'],
-    properties: {
-      userId: { type: 'integer' },
-      role: { 
+      phoneNumber: {
         type: 'string',
-        enum: ['CUSTOMER', 'ADMIN', 'SUPER_ADMIN']
+        pattern: '^[0-9+\\-() ]+$',
+        minLength: 10,
+        maxLength: 20
+      },
+      firstName: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 100
+      },
+      lastName: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 100
+      },
+      email: {
+        type: 'string',
+        format: 'email',
+        maxLength: 255
       }
     }
   },
@@ -118,36 +32,53 @@ const updateRoleSchema = {
     200: {
       type: 'object',
       properties: {
-        user: userSchema,
+        status: { type: 'string' },
+        phoneNumber: { type: 'string' },
+        userId: { type: 'string' },
         message: { type: 'string' }
       }
     }
   }
 };
 
-const listUsersSchema = {
-  querystring: {
+export const verifyOTPSchema = {
+  body: {
     type: 'object',
+    required: ['phoneNumber', 'otpCode'],
     properties: {
-      page: { type: 'integer', minimum: 1 },
-      limit: { type: 'integer', minimum: 1, maximum: 100 }
+      phoneNumber: {
+        type: 'string',
+        pattern: '^[0-9+\\-() ]+$',
+        minLength: 10,
+        maxLength: 20
+      },
+      otpCode: {
+        type: 'string',
+        pattern: '^[0-9]{4,6}$',
+        description: '4-6 digit OTP code'
+      }
     }
   },
   response: {
     200: {
       type: 'object',
       properties: {
-        users: {
-          type: 'array',
-          items: userSchema
-        },
-        meta: {
+        accessToken: { type: 'string' },
+        refreshToken: { type: 'string' },
+        tokenType: { type: 'string' },
+        expiresIn: { type: 'number' },
+        user: {
           type: 'object',
           properties: {
-            total: { type: 'integer' },
-            page: { type: 'integer' },
-            limit: { type: 'integer' },
-            totalPages: { type: 'integer' }
+            id: { type: 'string' },
+            phoneNumber: { type: 'string' },
+            email: { type: ['string', 'null'] },
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            role: { type: 'string', enum: ['CUSTOMER', 'ADMIN'] },
+            isVerified: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
           }
         }
       }
@@ -155,12 +86,55 @@ const listUsersSchema = {
   }
 };
 
-export {
-  registerSchema,
-  registerAdminSchema,
-  registerSuperAdminSchema,
-  loginSchema,
-  getMeSchema,
-  updateRoleSchema,
-  listUsersSchema
+export const refreshTokenSchema = {
+  body: {
+    type: 'object',
+    required: ['refreshToken'],
+    properties: {
+      refreshToken: {
+        type: 'string',
+        minLength: 10,
+        description: 'JWT refresh token'
+      }
+    }
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        accessToken: { type: 'string' },
+        tokenType: { type: 'string' },
+        expiresIn: { type: 'number' }
+      }
+    }
+  }
+};
+
+export const getMeSchema = {
+  headers: {
+    type: 'object',
+    properties: {
+      authorization: {
+        type: 'string',
+        pattern: '^Bearer .+$'
+      }
+    },
+    required: ['authorization']
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        phoneNumber: { type: 'string' },
+        email: { type: ['string', 'null'] },
+        firstName: { type: 'string' },
+        lastName: { type: 'string' },
+        role: { type: 'string', enum: ['CUSTOMER', 'ADMIN'] },
+        isVerified: { type: 'boolean' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' }
+      }
+    }
+  }
 };

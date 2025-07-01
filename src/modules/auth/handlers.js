@@ -1,16 +1,50 @@
 // src/modules/auth/handlers.js
 import AuthService from './service.js';
 
-async function register(request, reply) {
+async function requestOTP(request, reply) {
   const authService = new AuthService(this.prisma);
   
   try {
-    const user = await authService.register(request.body);
-    const token = this.jwt.sign({ id: user.id, email: user.email, role: user.role });
+    const result = await authService.requestOTP(request.body);
+    return reply.code(200).send(result);
+  } catch (error) {
+    request.log.error(error);
     
-    return reply.code(201).send({ 
-      user, 
-      token
+    if (error.statusCode) {
+      return reply.code(error.statusCode).send({ 
+        error: error.message 
+      });
+    }
+    
+    return reply.code(500).send({ 
+      error: 'Internal server error' 
+    });
+  }
+}
+
+async function verifyOTP(request, reply) {
+  const authService = new AuthService(this.prisma);
+  
+  try {
+    // Verify OTP and get user
+    const user = await authService.verifyOTP(request.body);
+    
+    // Generate tokens
+    const tokens = await this.generateTokens(user);
+    
+    return reply.code(200).send({
+      ...tokens,
+      user: {
+        id: user.id,
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      }
     });
   } catch (error) {
     request.log.error(error);
@@ -27,119 +61,34 @@ async function register(request, reply) {
   }
 }
 
-async function registerAdmin(request, reply) {
-  const authService = new AuthService(this.prisma);
-  
+async function refreshToken(request, reply) {
   try {
-    const user = await authService.registerAdmin(request.body);
-    
-    return reply.code(201).send({ 
-      user,
-      message: 'Admin user created successfully'
-    });
+    const result = await this.refreshAccessToken(request.body.refreshToken);
+    return reply.code(200).send(result);
   } catch (error) {
     request.log.error(error);
-    
-    if (error.statusCode) {
-      return reply.code(error.statusCode).send({ 
-        error: error.message 
-      });
-    }
-    
-    return reply.code(500).send({ 
-      error: 'Internal server error' 
-    });
-  }
-}
-
-async function registerSuperAdmin(request, reply) {
-  const authService = new AuthService(this.prisma);
-  
-  try {
-    const user = await authService.registerSuperAdmin(request.body);
-    
-    return reply.code(201).send({ 
-      user,
-      message: 'Super admin user created successfully'
-    });
-  } catch (error) {
-    request.log.error(error);
-    
-    if (error.statusCode) {
-      return reply.code(error.statusCode).send({ 
-        error: error.message 
-      });
-    }
-    
-    return reply.code(500).send({ 
-      error: 'Internal server error' 
-    });
-  }
-}
-
-async function login(request, reply) {
-  const authService = new AuthService(this.prisma);
-  
-  try {
-    const { email, password } = request.body;
-    const user = await authService.login(email, password);
-    const token = this.jwt.sign({ id: user.id, email: user.email, role: user.role });
-    
-    return reply.code(200).send({ 
-      user, 
-      token
-    });
-  } catch (error) {
-    request.log.error(error);
-    
-    if (error.statusCode) {
-      return reply.code(error.statusCode).send({ 
-        error: error.message 
-      });
-    }
-    
-    return reply.code(500).send({ 
-      error: 'Internal server error' 
+    return reply.code(401).send({ 
+      error: error.message || 'Invalid refresh token' 
     });
   }
 }
 
 async function getMe(request, reply) {
-  try {
-    const user = await this.prisma.user.findUnique({
-      where: { id: request.user.id }
-    });
-    
-    if (!user) {
-      return reply.code(404).send({ 
-        error: 'User not found' 
-      });
-    }
-    
-    const { password, ...userWithoutPassword } = user;
-    return reply.code(200).send(userWithoutPassword);
-  } catch (error) {
-    request.log.error(error);
-    return reply.code(500).send({ 
-      error: 'Internal server error' 
-    });
-  }
-}
-
-async function updateRole(request, reply) {
   const authService = new AuthService(this.prisma);
   
   try {
-    const { userId, role } = request.body;
-    const updatedUser = await authService.updateUserRole(
-      userId, 
-      role, 
-      request.user.role
-    );
+    const user = await authService.getUser(request.user.sub);
     
     return reply.code(200).send({
-      user: updatedUser,
-      message: `User role updated to ${role}`
+      id: user.id,
+      phoneNumber: user.phoneNumber,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      isVerified: user.isVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
     });
   } catch (error) {
     request.log.error(error);
@@ -150,48 +99,6 @@ async function updateRole(request, reply) {
       });
     }
     
-    return reply.code(500).send({ 
-      error: 'Internal server error' 
-    });
-  }
-}
-
-async function listUsers(request, reply) {
-  try {
-    // Pagination parameters
-    const page = parseInt(request.query.page) || 1;
-    const limit = parseInt(request.query.limit) || 10;
-    const skip = (page - 1) * limit;
-    
-    const users = await this.prisma.user.findMany({
-      skip,
-      take: limit,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    
-    const total = await this.prisma.user.count();
-    
-    return reply.code(200).send({
-      users,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-      }
-    });
-  } catch (error) {
-    request.log.error(error);
     return reply.code(500).send({ 
       error: 'Internal server error' 
     });
@@ -199,11 +106,8 @@ async function listUsers(request, reply) {
 }
 
 export {
-  register,
-  registerAdmin,
-  registerSuperAdmin,
-  login,
-  getMe,
-  updateRole,
-  listUsers
+  requestOTP,
+  verifyOTP,
+  refreshToken,
+  getMe
 };
