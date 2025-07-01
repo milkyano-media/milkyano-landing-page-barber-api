@@ -7,6 +7,7 @@ import {
 } from './handlers.js';
 
 import {
+  invalidateAllCacheSchema,
   invalidateByKeySchema,
   invalidateByPatternSchema,
   cacheStatsSchema
@@ -27,6 +28,7 @@ export default async function cacheRoutes(fastify, opts) {
 
   // Clear all cache
   fastify.delete('/all', {
+    schema: invalidateAllCacheSchema,
     handler: invalidateAllCache
   });
 
