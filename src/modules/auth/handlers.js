@@ -92,6 +92,47 @@ async function forgotPassword(request, reply) {
   }
 }
 
+async function login(request, reply) {
+  const authService = new AuthService(this.prisma);
+  
+  try {
+    const { emailOrPhone, password } = request.body;
+    
+    // Authenticate user
+    const user = await authService.login(emailOrPhone, password);
+    
+    // Generate tokens
+    const tokens = await this.generateTokens(user);
+    
+    return reply.code(200).send({
+      ...tokens,
+      user: {
+        id: user.id,
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      }
+    });
+  } catch (error) {
+    request.log.error(error);
+    
+    if (error.statusCode) {
+      return reply.code(error.statusCode).send({ 
+        error: error.message 
+      });
+    }
+    
+    return reply.code(500).send({ 
+      error: 'Internal server error' 
+    });
+  }
+}
+
 async function verifyOTP(request, reply) {
   const authService = new AuthService(this.prisma);
   
@@ -180,6 +221,7 @@ export {
   registerAdmin,
   requestOTP,
   forgotPassword,
+  login,
   verifyOTP,
   refreshToken,
   getMe

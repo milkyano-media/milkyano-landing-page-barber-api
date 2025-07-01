@@ -1,7 +1,10 @@
 // src/modules/auth/service.js
+import bcrypt from 'bcrypt';
 import { getSquareClient } from "../square/utils/client.js";
 import twilioService from "./utils/twilio.js";
 import { AppError } from "../../utils/errors.js";
+
+const SALT_ROUNDS = 10;
 
 export default class AuthService {
   constructor(prisma) {
@@ -14,7 +17,7 @@ export default class AuthService {
    * @param {Object} data - Registration data
    * @returns {Promise<Object>} User data with OTP sent status
    */
-  async register({ phoneNumber, firstName, lastName, email }) {
+  async register({ phoneNumber, firstName, lastName, email, password }) {
     const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
 
     // Check if user already exists
@@ -36,6 +39,9 @@ export default class AuthService {
         throw new AppError("Email already registered", 400);
       }
     }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
     // Create customer in Square
     let squareCustomerId = null;
@@ -61,6 +67,7 @@ export default class AuthService {
         firstName,
         lastName,
         email: email || null,
+        password: hashedPassword,
         role: "CUSTOMER",
         isVerified: false
       }
@@ -81,7 +88,7 @@ export default class AuthService {
    * @param {Object} data - Registration data
    * @returns {Promise<Object>} Admin user data
    */
-  async registerAdmin({ phoneNumber, firstName, lastName, email }) {
+  async registerAdmin({ phoneNumber, firstName, lastName, email, password }) {
     const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
 
     // Check if user already exists
@@ -102,6 +109,9 @@ export default class AuthService {
       throw new AppError("Email already registered", 400);
     }
 
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
     // Create admin user in database (no Square customer)
     const admin = await this.prisma.user.create({
       data: {
@@ -109,6 +119,7 @@ export default class AuthService {
         firstName,
         lastName,
         email,
+        password: hashedPassword,
         role: "ADMIN",
         isVerified: true // Admins are instantly verified
       }
@@ -179,6 +190,51 @@ export default class AuthService {
     return {
       message: "OTP sent for account recovery"
     };
+  }
+
+  /**
+   * Login with email/phone and password
+   * @param {string} emailOrPhone - Email or phone number
+   * @param {string} password - User password
+   * @returns {Promise<Object>} User data
+   */
+  async login(emailOrPhone, password) {
+    // Determine if input is email or phone
+    const isEmail = emailOrPhone.includes('@');
+    
+    let user;
+    if (isEmail) {
+      user = await this.prisma.user.findUnique({
+        where: { email: emailOrPhone }
+      });
+    } else {
+      const formattedPhone = twilioService.formatPhoneNumber(emailOrPhone);
+      user = await this.prisma.user.findUnique({
+        where: { phoneNumber: formattedPhone }
+      });
+    }
+
+    if (!user) {
+      throw new AppError("Invalid credentials", 401);
+    }
+
+    // Check if user has password (for backward compatibility)
+    if (!user.password) {
+      throw new AppError("Please use OTP login for this account", 400);
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new AppError("Invalid credentials", 401);
+    }
+
+    // Check if user is verified
+    if (!user.isVerified) {
+      throw new AppError("Please verify your account first", 403);
+    }
+
+    return user;
   }
 
   /**

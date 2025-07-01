@@ -4,6 +4,7 @@ import {
   registerAdmin,
   requestOTP,
   forgotPassword,
+  login,
   verifyOTP,
   refreshToken,
   getMe
@@ -14,6 +15,7 @@ import {
   registerAdminSchema,
   requestOTPSchema,
   forgotPasswordSchema,
+  loginSchema,
   verifyOTPSchema,
   refreshTokenSchema,
   getMeSchema
@@ -31,6 +33,12 @@ export default async function authRoutes(fastify, opts) {
   fastify.post('/register-admin', {
     schema: registerAdminSchema,
     handler: registerAdmin
+  });
+
+  // Login endpoint
+  fastify.post('/login', {
+    schema: loginSchema,
+    handler: login
   });
 
   // OTP management

@@ -3,7 +3,7 @@
 export const registerSchema = {
   body: {
     type: 'object',
-    required: ['phoneNumber', 'firstName', 'lastName'],
+    required: ['phoneNumber', 'firstName', 'lastName', 'password'],
     properties: {
       phoneNumber: {
         type: 'string',
@@ -25,6 +25,12 @@ export const registerSchema = {
         type: 'string',
         format: 'email',
         maxLength: 255
+      },
+      password: {
+        type: 'string',
+        minLength: 8,
+        maxLength: 100,
+        description: 'Password must be at least 8 characters'
       }
     }
   },
@@ -53,7 +59,7 @@ export const registerAdminSchema = {
   },
   body: {
     type: 'object',
-    required: ['phoneNumber', 'firstName', 'lastName', 'email'],
+    required: ['phoneNumber', 'firstName', 'lastName', 'email', 'password'],
     properties: {
       phoneNumber: {
         type: 'string',
@@ -75,6 +81,12 @@ export const registerAdminSchema = {
         type: 'string',
         format: 'email',
         maxLength: 255
+      },
+      password: {
+        type: 'string',
+        minLength: 8,
+        maxLength: 100,
+        description: 'Password must be at least 8 characters'
       }
     }
   },
@@ -85,6 +97,47 @@ export const registerAdminSchema = {
         userId: { type: 'string' },
         phoneNumber: { type: 'string' },
         message: { type: 'string' }
+      }
+    }
+  }
+};
+
+export const loginSchema = {
+  body: {
+    type: 'object',
+    required: ['emailOrPhone', 'password'],
+    properties: {
+      emailOrPhone: {
+        type: 'string',
+        minLength: 1,
+        description: 'Email address or phone number'
+      },
+      password: {
+        type: 'string',
+        minLength: 1
+      }
+    }
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        accessToken: { type: 'string' },
+        refreshToken: { type: 'string' },
+        tokenType: { type: 'string' },
+        expiresIn: { type: 'number' },
+        user: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            phoneNumber: { type: 'string' },
+            email: { type: 'string' },
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            role: { type: 'string' },
+            isVerified: { type: 'boolean' }
+          }
+        }
       }
     }
   }

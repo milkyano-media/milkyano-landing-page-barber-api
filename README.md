@@ -34,8 +34,9 @@ This API serves as the backend for the milkyano-barber-web frontend, replacing t
 All endpoints are prefixed with `/api/v1`.
 
 ### Authentication (`/api/v1/auth`)
-- `POST /register` - Register new customer (sends OTP)
-- `POST /register-admin` - Register new admin (requires X-Secret-Key header)
+- `POST /register` - Register new customer with password (sends OTP)
+- `POST /register-admin` - Register new admin with password (requires X-Secret-Key header)
+- `POST /login` - Login with email/phone and password
 - `POST /request-otp` - Resend OTP for existing user
 - `POST /forgot-password` - Request account recovery OTP
 - `POST /verify-otp` - Verify OTP and get tokens
@@ -194,10 +195,11 @@ Note: The system uses completely stateless JWT authentication. Both access and r
 ## Authentication Flow
 
 ### Customer Registration:
-1. **Register**: Client calls `/register` with user details
-2. **OTP Sent**: Backend creates Square customer, saves user, sends OTP
-3. **Verify OTP**: Client calls `/verify-otp` with phone and code
-4. **Receive Tokens**: Client receives JWT tokens (1 day access, 90 days refresh)
+1. **Register**: Client calls `/register` with user details and password
+2. **OTP Sent**: Backend creates Square customer, saves user with hashed password, sends OTP
+3. **Verify OTP**: Client calls `/verify-otp` to verify account
+4. **Login**: Client can now login with email/phone and password
+5. **Receive Tokens**: Client receives JWT tokens (1 day access, 90 days refresh)
 
 ### Admin Registration:
 1. **Register Admin**: Client calls `/register-admin` with X-Secret-Key header
