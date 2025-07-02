@@ -14,7 +14,7 @@ export default class SquareService {
    */
   async getBarbers() {
     try {
-      const { result } = await this.client.teamApi.searchTeamMembers({
+      const { result } = await this.client.team.searchTeamMembers({
         query: {
           filter: {
             locationIds: [this.locationId],
@@ -48,7 +48,7 @@ export default class SquareService {
    */
   async getBarberDetails(barberId) {
     try {
-      const { result } = await this.client.teamApi.retrieveTeamMember(barberId);
+      const { result } = await this.client.team.retrieveTeamMember(barberId);
       const member = result.teamMember;
 
       if (!member) {
@@ -84,7 +84,7 @@ export default class SquareService {
    */
   async getServices(filter, type) {
     try {
-      const { result } = await this.client.catalogApi.listCatalog({
+      const { result } = await this.client.catalog.listCatalog({
         types: 'ITEM'
       });
 
@@ -153,7 +153,7 @@ export default class SquareService {
         }
       };
 
-      const { result } = await this.client.bookingsApi.searchAvailability(searchRequest);
+      const { result } = await this.client.bookings.searchAvailability(searchRequest);
 
       return {
         availabilities: result.availabilities?.map(slot => ({
@@ -198,7 +198,7 @@ export default class SquareService {
         customerNote
       };
 
-      const { result } = await this.client.bookingsApi.createBooking({ booking });
+      const { result } = await this.client.bookings.createBooking({ booking });
 
       return {
         id: result.booking.id,
@@ -228,7 +228,7 @@ export default class SquareService {
    */
   async getBookingDetails(bookingId) {
     try {
-      const { result } = await this.client.bookingsApi.retrieveBooking(bookingId);
+      const { result } = await this.client.bookings.retrieveBooking(bookingId);
       
       return {
         id: result.booking.id,
@@ -260,7 +260,7 @@ export default class SquareService {
    */
   async cancelBooking(bookingId, bookingVersion) {
     try {
-      const { result } = await this.client.bookingsApi.cancelBooking(bookingId, {
+      const { result } = await this.client.bookings.cancelBooking(bookingId, {
         bookingVersion
       });
       
@@ -285,7 +285,7 @@ export default class SquareService {
    */
   async _getServiceVariationDetails(serviceVariationId) {
     try {
-      const { result } = await this.client.catalogApi.retrieveCatalogObject(serviceVariationId);
+      const { result } = await this.client.catalog.retrieveCatalogObject(serviceVariationId);
       
       return {
         durationMinutes: result.object?.itemVariationData?.serviceDuration / 60000, // Convert ms to minutes

@@ -75,7 +75,7 @@ export default class CustomerService {
     // Update Square customer if user has Square ID
     if (updatedUser.id.startsWith('SQ')) { // Square IDs start with SQ
       try {
-        await this.squareClient.customersApi.updateCustomer(updatedUser.id, {
+        await this.squareClient.customers.updateCustomer(updatedUser.id, {
           givenName: updatedUser.firstName,
           familyName: updatedUser.lastName,
           emailAddress: updatedUser.email || undefined
@@ -137,7 +137,7 @@ export default class CustomerService {
         };
       }
 
-      const { result } = await this.squareClient.bookingsApi.listBookings(searchRequest);
+      const { result } = await this.squareClient.bookings.listBookings(searchRequest);
 
       return result.bookings?.map(booking => ({
         id: booking.id,

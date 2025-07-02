@@ -46,7 +46,7 @@ export default class AuthService {
     // Create customer in Square
     let squareCustomerId = null;
     try {
-      const { result } = await this.squareClient.customersApi.createCustomer({
+      const { result } = await this.squareClient.customers.create({
         givenName: firstName,
         familyName: lastName,
         phoneNumber: formattedPhone,
@@ -328,7 +328,7 @@ export default class AuthService {
     if (updatedUser.id.length > 10) {
       // Square IDs are longer than UUIDs
       try {
-        await this.squareClient.customersApi.updateCustomer(updatedUser.id, {
+        await this.squareClient.customers.updateCustomer(updatedUser.id, {
           givenName: updatedUser.firstName,
           familyName: updatedUser.lastName,
           emailAddress: updatedUser.email || undefined

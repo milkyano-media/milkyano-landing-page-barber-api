@@ -1,10 +1,11 @@
 // src/modules/square/utils/client.js
+import { SquareClient } from 'square';
 
 let squareClient = null;
 
 export function getSquareClient() {
   if (!squareClient) {
-    squareClient = new Client({
+    squareClient = new SquareClient({
       token: process.env.SQUARE_ACCESS_TOKEN
     });
   }
