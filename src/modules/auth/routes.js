@@ -74,19 +74,67 @@ export default async function authRoutes(fastify, opts) {
   fastify.patch('/update-phone', {
     preHandler: [fastify.authenticate],
     schema: {
+      tags: ['auth'],
+      summary: 'Update phone number',
+      description: 'Updates the authenticated user\'s phone number',
+      security: [{ bearerAuth: [] }],
+      headers: {
+        type: 'object',
+        properties: {
+          authorization: {
+            type: 'string',
+            pattern: '^Bearer .+$',
+            description: 'Bearer token'
+          }
+        },
+        required: ['authorization']
+      },
       body: {
         type: 'object',
         required: ['phoneNumber'],
         properties: {
-          phoneNumber: { type: 'string' }
+          phoneNumber: {
+            type: 'string',
+            pattern: '^[0-9+\\-() ]+$',
+            minLength: 10,
+            maxLength: 20,
+            description: 'New phone number in international format'
+          }
         }
       },
       response: {
         200: {
           type: 'object',
           properties: {
-            user: { $ref: 'UserResponse#' },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                phoneNumber: { type: 'string' },
+                email: { type: ['string', 'null'] },
+                firstName: { type: 'string' },
+                lastName: { type: 'string' },
+                role: { type: 'string', enum: ['CUSTOMER', 'ADMIN'] },
+                isVerified: { type: 'boolean' },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' }
+              }
+            },
             message: { type: 'string' }
+          }
+        },
+        400: {
+          description: 'Invalid phone number or already in use',
+          type: 'object',
+          properties: {
+            error: { type: 'string' }
+          }
+        },
+        401: {
+          description: 'Unauthorized - Invalid or missing token',
+          type: 'object',
+          properties: {
+            error: { type: 'string' }
           }
         }
       }
