@@ -1,5 +1,5 @@
 // src/modules/auth/service.js
-import bcrypt from 'bcrypt';
+import bcrypt from "bcrypt";
 import { getSquareClient } from "../square/utils/client.js";
 import twilioService from "./utils/twilio.js";
 import { AppError } from "../../utils/errors.js";
@@ -74,7 +74,7 @@ export default class AuthService {
     });
 
     // Send OTP
-    await twilioService.sendOTP(phoneNumber);
+    // await twilioService.sendOTP(phoneNumber);
 
     return {
       userId: user.id,
@@ -181,7 +181,10 @@ export default class AuthService {
 
     // Only allow for customers
     if (user.role !== "CUSTOMER") {
-      throw new AppError("Password reset not available for this user type", 403);
+      throw new AppError(
+        "Password reset not available for this user type",
+        403
+      );
     }
 
     // Send OTP
@@ -200,8 +203,8 @@ export default class AuthService {
    */
   async login(emailOrPhone, password) {
     // Determine if input is email or phone
-    const isEmail = emailOrPhone.includes('@');
-    
+    const isEmail = emailOrPhone.includes("@");
+
     let user;
     if (isEmail) {
       user = await this.prisma.user.findUnique({
@@ -331,6 +334,51 @@ export default class AuthService {
         });
       } catch (error) {
         console.error("Square customer update error:", error);
+        // Continue even if Square update fails
+      }
+    }
+
+    return updatedUser;
+  }
+
+  /**
+   * Update user phone number
+   * @param {string} userId - User ID
+   * @param {string} phoneNumber - New phone number
+   * @returns {Promise<Object>} Updated user
+   */
+  async updateUserPhoneNumber(userId, phoneNumber) {
+    // Validate and format phone number
+    const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
+
+    // Check if phone number is already taken by another user
+    const existingPhoneUser = await this.prisma.user.findFirst({
+      where: {
+        phoneNumber: formattedPhone,
+        NOT: { id: userId }
+      }
+    });
+
+    if (existingPhoneUser) {
+      throw new AppError("Phone number already registered", 400);
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        phoneNumber: formattedPhone
+      }
+    });
+
+    // Update Square customer if user has Square ID
+    if (updatedUser.id.length > 10) {
+      // Square IDs are longer than UUIDs
+      try {
+        await this.squareClient.customers.updateCustomer(updatedUser.id, {
+          phoneNumber: formattedPhone
+        });
+      } catch (error) {
+        console.error("Square customer phone update error:", error);
         // Continue even if Square update fails
       }
     }

@@ -39,11 +39,21 @@ class TwilioService {
   async sendOTP(phoneNumber) {
     const e164PhoneNumber = this.formatPhoneNumber(phoneNumber);
 
+    // Mock OTP for development
+    if (process.env.MOCK_OTP) {
+      console.log(`[MOCK OTP] Sending OTP ${process.env.MOCK_OTP} to ${e164PhoneNumber}`);
+      return {
+        status: "pending",
+        valid: false,
+        to: e164PhoneNumber
+      };
+    }
+
     try {
       const verification = await this.client.verify.v2
         .services(this.serviceSid)
         .verifications.create({
-          to: "+6281288900621",
+          to: e164PhoneNumber,
           channel: "sms"
         });
 
@@ -67,11 +77,22 @@ class TwilioService {
   async verifyOTP(phoneNumber, otpCode) {
     const e164PhoneNumber = this.formatPhoneNumber(phoneNumber);
 
+    // Mock OTP verification for development
+    if (process.env.MOCK_OTP) {
+      console.log(`[MOCK OTP] Verifying OTP ${otpCode} for ${e164PhoneNumber}`);
+      const isValid = otpCode === process.env.MOCK_OTP;
+      return {
+        status: isValid ? "approved" : "pending",
+        valid: isValid,
+        to: e164PhoneNumber
+      };
+    }
+
     try {
       const verificationCheck = await this.client.verify.v2
         .services(this.serviceSid)
         .verificationChecks.create({
-          to: "+6281288900621",
+          to: e164PhoneNumber,
           code: otpCode
         });
 

@@ -7,7 +7,8 @@ import {
   login,
   verifyOTP,
   refreshToken,
-  getMe
+  getMe,
+  updatePhoneNumber
 } from './handlers.js';
 
 import {
@@ -68,5 +69,28 @@ export default async function authRoutes(fastify, opts) {
     preHandler: [fastify.authenticate],
     schema: getMeSchema,
     handler: getMe
+  });
+
+  fastify.patch('/update-phone', {
+    preHandler: [fastify.authenticate],
+    schema: {
+      body: {
+        type: 'object',
+        required: ['phoneNumber'],
+        properties: {
+          phoneNumber: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            user: { $ref: 'UserResponse#' },
+            message: { type: 'string' }
+          }
+        }
+      }
+    },
+    handler: updatePhoneNumber
   });
 }

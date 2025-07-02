@@ -237,6 +237,45 @@ async function getMe(request, reply) {
   }
 }
 
+async function updatePhoneNumber(request, reply) {
+  const authService = new AuthService(this.prisma);
+  
+  try {
+    const userId = request.user.sub;
+    const { phoneNumber } = request.body;
+    
+    // Update the user's phone number
+    const updatedUser = await authService.updateUserPhoneNumber(userId, phoneNumber);
+    
+    return reply.send({
+      user: {
+        id: updatedUser.id,
+        phoneNumber: updatedUser.phoneNumber,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        role: updatedUser.role,
+        isVerified: updatedUser.isVerified,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt
+      },
+      message: 'Phone number updated successfully'
+    });
+  } catch (error) {
+    request.log.error(error);
+    
+    if (error.statusCode) {
+      return reply.code(error.statusCode).send({ 
+        error: error.message 
+      });
+    }
+    
+    return reply.code(500).send({ 
+      error: 'Internal server error' 
+    });
+  }
+}
+
 export {
   register,
   registerAdmin,
@@ -245,5 +284,6 @@ export {
   login,
   verifyOTP,
   refreshToken,
-  getMe
+  getMe,
+  updatePhoneNumber
 };
