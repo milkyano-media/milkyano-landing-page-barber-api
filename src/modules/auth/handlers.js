@@ -6,7 +6,28 @@ async function register(request, reply) {
   
   try {
     const result = await authService.register(request.body);
-    return reply.code(201).send(result);
+    
+    // Get the created user
+    const user = await authService.getUser(result.userId);
+    
+    // Generate tokens for the new user
+    const tokens = await this.generateTokens(user);
+    
+    return reply.code(201).send({
+      ...tokens,
+      user: {
+        id: user.id,
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      },
+      message: result.message
+    });
   } catch (error) {
     request.log.error(error);
     

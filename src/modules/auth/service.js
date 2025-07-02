@@ -229,11 +229,7 @@ export default class AuthService {
       throw new AppError("Invalid credentials", 401);
     }
 
-    // Check if user is verified
-    if (!user.isVerified) {
-      throw new AppError("Please verify your account first", 403);
-    }
-
+    // Return user even if not verified - frontend will handle showing OTP modal
     return user;
   }
 
