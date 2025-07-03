@@ -86,8 +86,15 @@ async function requestOTP(request, reply) {
       });
     }
     
+    // Check if it's a phone number validation error
+    if (error.message && error.message.includes('Please')) {
+      return reply.code(400).send({ 
+        error: error.message 
+      });
+    }
+    
     return reply.code(500).send({ 
-      error: 'Internal server error' 
+      error: 'Something went wrong. Please try again.' 
     });
   }
 }
@@ -187,8 +194,15 @@ async function verifyOTP(request, reply) {
       });
     }
     
+    // Check for specific OTP errors
+    if (error.message && (error.message.includes('Invalid OTP') || error.message.includes('expired'))) {
+      return reply.code(400).send({ 
+        error: 'The verification code is incorrect or has expired. Please check and try again.' 
+      });
+    }
+    
     return reply.code(500).send({ 
-      error: 'Internal server error' 
+      error: 'Something went wrong. Please try again.' 
     });
   }
 }

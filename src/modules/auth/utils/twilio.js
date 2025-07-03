@@ -18,16 +18,35 @@ class TwilioService {
    */
   formatPhoneNumber(phoneNumber) {
     try {
+      // Check if phone number is provided
+      if (!phoneNumber || phoneNumber.trim() === '') {
+        throw new Error("Please enter your phone number");
+      }
+
       // Parse the phone number with Australian default
       const parsed = parsePhoneNumber(phoneNumber, "AU");
 
       if (!parsed || !parsed.isValid()) {
-        throw new Error("Invalid phone number");
+        // Provide specific error messages based on common issues
+        if (phoneNumber.length < 10) {
+          throw new Error("Phone number is too short. Please enter a valid Australian mobile number (e.g., 0412 345 678)");
+        } else if (phoneNumber.length > 15) {
+          throw new Error("Phone number is too long. Please check and try again");
+        } else if (!/^[0-9+\s()-]+$/.test(phoneNumber)) {
+          throw new Error("Phone number contains invalid characters. Please use only numbers");
+        } else {
+          throw new Error("Please enter a valid Australian mobile number (e.g., 0412 345 678 or +61 412 345 678)");
+        }
       }
 
       return parsed.format("E.164"); // Returns format like +61412345678
     } catch (error) {
-      throw new Error(`Invalid phone number format: ${error.message}`);
+      // If it's already a user-friendly error, pass it through
+      if (error.message.includes("Please")) {
+        throw error;
+      }
+      // Otherwise, provide a generic user-friendly message
+      throw new Error("Please enter a valid Australian mobile number");
     }
   }
 
