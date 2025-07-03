@@ -46,8 +46,25 @@ export const registerSchema = {
       description: 'Registration successful, OTP sent',
       type: 'object',
       properties: {
-        userId: { type: 'string', description: 'Unique user ID' },
-        phoneNumber: { type: 'string', description: 'Registered phone number' },
+        accessToken: { type: 'string', description: 'JWT access token (expires in 1 day)' },
+        refreshToken: { type: 'string', description: 'JWT refresh token (expires in 90 days)' },
+        tokenType: { type: 'string', description: 'Token type (Bearer)' },
+        expiresIn: { type: 'number', description: 'Access token expiry in seconds' },
+        user: {
+          type: 'object',
+          description: 'User information',
+          properties: {
+            id: { type: 'string' },
+            phoneNumber: { type: 'string' },
+            email: { type: ['string', 'null'] },
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            role: { type: 'string', enum: ['CUSTOMER', 'ADMIN'] },
+            isVerified: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
         message: { type: 'string', description: 'Success message' }
       }
     },
