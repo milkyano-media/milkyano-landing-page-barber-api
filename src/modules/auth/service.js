@@ -26,7 +26,7 @@ export default class AuthService {
     });
 
     if (existingUser) {
-      throw new AppError("Phone number already registered", 400);
+      throw new AppError(400, "Phone number already registered");
     }
 
     // Check if email is already taken
@@ -36,7 +36,7 @@ export default class AuthService {
       });
 
       if (existingEmailUser) {
-        throw new AppError("Email already registered", 400);
+        throw new AppError(400, "Email already registered");
       }
     }
 
@@ -97,7 +97,7 @@ export default class AuthService {
     });
 
     if (existingUser) {
-      throw new AppError("Phone number already registered", 400);
+      throw new AppError(400, "Phone number already registered");
     }
 
     // Check if email is already taken
@@ -133,33 +133,53 @@ export default class AuthService {
   }
 
   /**
-   * Request OTP for existing user only
+   * Request OTP for existing user or phone number change
    * @param {string} phoneNumber - Phone number to send OTP to
+   * @param {Object|null} authenticatedUser - Authenticated user if changing phone number
    * @returns {Promise<Object>} OTP request status
    */
-  async requestOTP(phoneNumber) {
+  async requestOTP(phoneNumber, authenticatedUser = null) {
     const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
 
-    // Check if user exists
-    const user = await this.prisma.user.findUnique({
-      where: { phoneNumber: formattedPhone }
-    });
+    if (authenticatedUser) {
+      // Authenticated flow - user changing phone number
+      // Check new phone isn't already taken by another user
+      const existingUser = await this.prisma.user.findUnique({
+        where: { phoneNumber: formattedPhone }
+      });
+      
+      if (existingUser && existingUser.id !== authenticatedUser.id) {
+        throw new AppError(400, "Phone number already in use");
+      }
+      
+      // Send OTP to new number
+      await twilioService.sendOTP(phoneNumber);
+      
+      return {
+        message: "OTP sent to new phone number"
+      };
+    } else {
+      // Unauthenticated flow - existing user login
+      const user = await this.prisma.user.findUnique({
+        where: { phoneNumber: formattedPhone }
+      });
 
-    if (!user) {
-      throw new AppError("User not found", 404);
+      if (!user) {
+        throw new AppError(404, "User not found");
+      }
+
+      // Only allow OTP for customers
+      if (user.role !== "CUSTOMER") {
+        throw new AppError(403, "OTP not available for this user type");
+      }
+
+      // Send OTP
+      await twilioService.sendOTP(phoneNumber);
+
+      return {
+        message: "OTP sent successfully"
+      };
     }
-
-    // Only allow OTP for customers
-    if (user.role !== "CUSTOMER") {
-      throw new AppError("OTP not available for this user type", 403);
-    }
-
-    // Send OTP
-    await twilioService.sendOTP(phoneNumber);
-
-    return {
-      message: "OTP sent successfully"
-    };
   }
 
   /**
@@ -176,7 +196,7 @@ export default class AuthService {
     });
 
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError(404, "User not found");
     }
 
     // Only allow for customers
@@ -218,18 +238,18 @@ export default class AuthService {
     }
 
     if (!user) {
-      throw new AppError("Invalid credentials", 401);
+      throw new AppError(401, "Invalid credentials");
     }
 
     // Check if user has password (for backward compatibility)
     if (!user.password) {
-      throw new AppError("Please use OTP login for this account", 400);
+      throw new AppError(400, "Please use OTP login for this account");
     }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new AppError("Invalid credentials", 401);
+      throw new AppError(401, "Invalid credentials");
     }
 
     // Return user even if not verified - frontend will handle showing OTP modal
@@ -237,12 +257,12 @@ export default class AuthService {
   }
 
   /**
-   * Verify OTP and return tokens
-   * @param {string} phoneNumber - Phone number that received OTP
-   * @param {string} otpCode - OTP code to verify
-   * @returns {Promise<Object>} User and tokens
+   * Verify OTP and return user
+   * @param {Object} data - Contains phoneNumber and otpCode
+   * @param {Object|null} authenticatedUser - Authenticated user if changing phone number
+   * @returns {Promise<Object>} Updated user
    */
-  async verifyOTP({ phoneNumber, otpCode }) {
+  async verifyOTP({ phoneNumber, otpCode }, authenticatedUser = null) {
     const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
 
     // Verify OTP with Twilio
@@ -252,25 +272,47 @@ export default class AuthService {
     );
 
     if (!verificationResult.valid) {
-      throw new AppError("Invalid or expired OTP", 400);
+      throw new AppError(400, "Invalid or expired OTP");
     }
 
-    // Find user
-    const user = await this.prisma.user.findUnique({
-      where: { phoneNumber: formattedPhone }
-    });
+    let user;
 
-    if (!user) {
-      throw new AppError("User not found", 404);
-    }
-
-    // Update user as verified
-    if (!user.isVerified) {
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { isVerified: true }
+    if (authenticatedUser) {
+      // Authenticated flow - user changing phone number
+      // Check if new phone number is already taken
+      const existingUser = await this.prisma.user.findUnique({
+        where: { phoneNumber: formattedPhone }
       });
-      user.isVerified = true;
+      
+      if (existingUser && existingUser.id !== authenticatedUser.id) {
+        throw new AppError(400, "Phone number already in use");
+      }
+
+      // Update user's phone number and mark as verified
+      user = await this.prisma.user.update({
+        where: { id: authenticatedUser.id },
+        data: { 
+          phoneNumber: formattedPhone,
+          isVerified: true 
+        }
+      });
+    } else {
+      // Unauthenticated flow - find user by phone number
+      user = await this.prisma.user.findUnique({
+        where: { phoneNumber: formattedPhone }
+      });
+
+      if (!user) {
+        throw new AppError(404, "User not found");
+      }
+
+      // Update user as verified
+      if (!user.isVerified) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: { isVerified: true }
+        });
+      }
     }
 
     return user;
@@ -287,7 +329,7 @@ export default class AuthService {
     });
 
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError(404, "User not found");
     }
 
     return user;
@@ -310,7 +352,7 @@ export default class AuthService {
       });
 
       if (existingEmailUser) {
-        throw new AppError("Email already registered", 400);
+        throw new AppError(400, "Email already registered");
       }
     }
 
@@ -341,48 +383,4 @@ export default class AuthService {
     return updatedUser;
   }
 
-  /**
-   * Update user phone number
-   * @param {string} userId - User ID
-   * @param {string} phoneNumber - New phone number
-   * @returns {Promise<Object>} Updated user
-   */
-  async updateUserPhoneNumber(userId, phoneNumber) {
-    // Validate and format phone number
-    const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
-
-    // Check if phone number is already taken by another user
-    const existingPhoneUser = await this.prisma.user.findFirst({
-      where: {
-        phoneNumber: formattedPhone,
-        NOT: { id: userId }
-      }
-    });
-
-    if (existingPhoneUser) {
-      throw new AppError("Phone number already registered", 400);
-    }
-
-    const updatedUser = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        phoneNumber: formattedPhone
-      }
-    });
-
-    // Update Square customer if user has Square ID
-    if (updatedUser.id.length > 10) {
-      // Square IDs are longer than UUIDs
-      try {
-        await this.squareClient.customers.updateCustomer(updatedUser.id, {
-          phoneNumber: formattedPhone
-        });
-      } catch (error) {
-        console.error("Square customer phone update error:", error);
-        // Continue even if Square update fails
-      }
-    }
-
-    return updatedUser;
-  }
 }

@@ -202,8 +202,18 @@ export const loginSchema = {
 
 export const requestOTPSchema = {
   tags: ['auth'],
-  summary: 'Request OTP for existing user',
-  description: 'Sends OTP to registered phone number for verification',
+  summary: 'Request OTP for login or phone number change',
+  description: 'Sends OTP to phone number. For unauthenticated users: sends OTP to existing registered number for login. For authenticated users: sends OTP to new number for phone change.',
+  headers: {
+    type: 'object',
+    properties: {
+      authorization: {
+        type: 'string',
+        pattern: '^Bearer .+$',
+        description: 'Optional - Bearer token for authenticated phone number change'
+      }
+    }
+  },
   body: {
     type: 'object',
     required: ['phoneNumber'],
@@ -213,7 +223,7 @@ export const requestOTPSchema = {
         pattern: '^[0-9+\\-() ]+$',
         minLength: 10,
         maxLength: 20,
-        description: 'Registered phone number'
+        description: 'Phone number to send OTP to'
       }
     }
   },
@@ -225,8 +235,15 @@ export const requestOTPSchema = {
         message: { type: 'string' }
       }
     },
+    400: {
+      description: 'Invalid phone number or already in use',
+      type: 'object',
+      properties: {
+        error: { type: 'string' }
+      }
+    },
     404: {
-      description: 'User not found',
+      description: 'User not found (unauthenticated flow only)',
       type: 'object',
       properties: {
         error: { type: 'string' }
