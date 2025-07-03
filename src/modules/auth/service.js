@@ -74,7 +74,7 @@ export default class AuthService {
     });
 
     // Send OTP
-    // await twilioService.sendOTP(phoneNumber);
+    await twilioService.sendOTP(phoneNumber);
 
     return {
       userId: user.id,
