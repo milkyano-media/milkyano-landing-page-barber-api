@@ -383,4 +383,30 @@ export default class AuthService {
     return updatedUser;
   }
 
+  /**
+   * Update user password
+   * @param {string} userId - User ID
+   * @param {string} newPassword - New password
+   * @returns {Promise<void>}
+   */
+  async updatePassword(userId, newPassword) {
+    // Get user to verify they exist
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      throw new AppError(404, "User not found");
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+    // Update password
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
+    });
+  }
+
 }

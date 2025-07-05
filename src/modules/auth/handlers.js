@@ -258,6 +258,35 @@ async function getMe(request, reply) {
   }
 }
 
+async function updatePassword(request, reply) {
+  const authService = new AuthService(this.prisma);
+  
+  try {
+    // User is already authenticated by preHandler
+    const userId = request.user.sub;
+    const { newPassword } = request.body;
+    
+    // Update password
+    await authService.updatePassword(userId, newPassword);
+    
+    return reply.code(200).send({
+      message: 'Password updated successfully'
+    });
+  } catch (error) {
+    request.log.error(error);
+    
+    if (error.statusCode) {
+      return reply.code(error.statusCode).send({ 
+        error: error.message 
+      });
+    }
+    
+    return reply.code(500).send({ 
+      error: 'Internal server error' 
+    });
+  }
+}
+
 export {
   register,
   registerAdmin,
@@ -266,5 +295,6 @@ export {
   login,
   verifyOTP,
   refreshToken,
-  getMe
+  getMe,
+  updatePassword
 };

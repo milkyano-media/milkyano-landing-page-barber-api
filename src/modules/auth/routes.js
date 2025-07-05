@@ -7,7 +7,8 @@ import {
   login,
   verifyOTP,
   refreshToken,
-  getMe
+  getMe,
+  updatePassword
 } from './handlers.js';
 
 import {
@@ -18,7 +19,8 @@ import {
   loginSchema,
   verifyOTPSchema,
   refreshTokenSchema,
-  getMeSchema
+  getMeSchema,
+  updatePasswordSchema
 } from './schemas/index.js';
 
 export default async function authRoutes(fastify, opts) {
@@ -98,6 +100,12 @@ export default async function authRoutes(fastify, opts) {
     preHandler: [fastify.authenticate],
     schema: getMeSchema,
     handler: getMe
+  });
+
+  fastify.put('/update-password', {
+    preHandler: [fastify.authenticate],
+    schema: updatePasswordSchema,
+    handler: updatePassword
   });
 
 }

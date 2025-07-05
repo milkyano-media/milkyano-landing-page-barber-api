@@ -445,3 +445,56 @@ export const getMeSchema = {
     }
   }
 };
+
+export const updatePasswordSchema = {
+  tags: ['auth'],
+  summary: 'Update user password',
+  description: 'Updates the password for the authenticated user',
+  security: [{ bearerAuth: [] }],
+  headers: {
+    type: 'object',
+    properties: {
+      authorization: {
+        type: 'string',
+        pattern: '^Bearer .+$',
+        description: 'Bearer token'
+      }
+    },
+    required: ['authorization']
+  },
+  body: {
+    type: 'object',
+    required: ['newPassword'],
+    properties: {
+      newPassword: {
+        type: 'string',
+        minLength: 8,
+        maxLength: 100,
+        description: 'New password (minimum 8 characters)'
+      }
+    }
+  },
+  response: {
+    200: {
+      description: 'Password updated successfully',
+      type: 'object',
+      properties: {
+        message: { type: 'string' }
+      }
+    },
+    401: {
+      description: 'Unauthorized - Invalid or missing token',
+      type: 'object',
+      properties: {
+        error: { type: 'string' }
+      }
+    },
+    404: {
+      description: 'User not found',
+      type: 'object',
+      properties: {
+        error: { type: 'string' }
+      }
+    }
+  }
+};
