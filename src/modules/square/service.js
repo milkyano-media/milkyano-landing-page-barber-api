@@ -156,42 +156,40 @@ export default class SquareService {
    * @param {Object} params - Availability search parameters
    * @returns {Promise<Object>} Availability slots
    */
-  async checkAvailability({ serviceVariationId, startAt, endAt, teamMemberIds }) {
+  async checkAvailability({ serviceVariationId, startAt, endAt }) {
     try {
-      const searchRequest = {
+      const requestBody = {
         query: {
           filter: {
-            locationId: this.locationId,
-            segmentFilters: [{
-              serviceVariationId,
-              teamMemberIdFilter: {
-                any: teamMemberIds || []
+            start_at_range: {
+              start_at: startAt,
+              end_at: endAt
+            },
+            segment_filters: [
+              {
+                service_variation_id: serviceVariationId
               }
-            }],
-            startAtRange: {
-              startAt,
-              endAt
-            }
+            ],
+            location_id: this.locationId
           }
         }
       };
 
-      const { result } = await this.client.bookings.searchAvailability(searchRequest);
-
+      console.log('Searching availability with:', JSON.stringify(requestBody, null, 2));
+      const response = await this.client.post('/bookings/availability/search', requestBody);
+      
+      // Ensure we have the availabilities array
+      const availabilities = response.data.availabilities || [];
+      
+      console.log(`Found ${availabilities.length} availability slots`);
+      
+      // Return a properly structured response
       return {
-        availabilities: result.availabilities?.map(slot => ({
-          startAt: slot.startAt,
-          locationId: slot.locationId,
-          appointmentSegments: slot.appointmentSegments?.map(segment => ({
-            durationMinutes: segment.durationMinutes,
-            serviceVariationId: segment.serviceVariationId,
-            teamMemberId: segment.teamMemberId,
-            serviceVariationVersion: segment.serviceVariationVersion
-          }))
-        })) || []
+        availabilities: availabilities,
+        errors: response.data.errors || []
       };
     } catch (error) {
-      console.error('Square checkAvailability error:', error);
+      console.error('Square checkAvailability error:', error.response?.data || error.message);
       throw new AppError(500, 'Failed to check availability');
     }
   }
@@ -208,37 +206,44 @@ export default class SquareService {
       // Get service details to determine duration
       const serviceDetails = await this._getServiceVariationDetails(serviceVariationId);
       
-      const booking = {
-        customerId,
-        startAt,
-        locationId: this.locationId,
-        appointmentSegments: [{
-          durationMinutes: serviceDetails.durationMinutes || 30,
-          serviceVariationId,
-          teamMemberId,
-          serviceVariationVersion: serviceDetails.version
-        }],
-        customerNote
+      const requestBody = {
+        booking: {
+          customer_id: customerId,
+          start_at: startAt,
+          location_id: this.locationId,
+          location_type: 'BUSINESS_LOCATION',
+          appointment_segments: [{
+            duration_minutes: Math.floor(serviceDetails.durationMinutes || 30),
+            service_variation_id: serviceVariationId,
+            team_member_id: teamMemberId,
+            service_variation_version: serviceDetails.version || 1
+          }],
+          customer_note: customerNote || '',
+          seller_note: ''
+        }
       };
 
-      const { result } = await this.client.bookings.createBooking({ booking });
-
+      console.log('Creating booking with:', requestBody);
+      const response = await this.client.post('/bookings', requestBody);
+      
+      const booking = response.data.booking;
+      
       return {
-        id: result.booking.id,
-        version: result.booking.version,
-        status: result.booking.status,
-        createdAt: result.booking.createdAt,
-        updatedAt: result.booking.updatedAt,
-        startAt: result.booking.startAt,
-        locationId: result.booking.locationId,
-        customerId: result.booking.customerId,
-        customerNote: result.booking.customerNote,
-        appointmentSegments: result.booking.appointmentSegments
+        id: booking.id,
+        version: booking.version,
+        status: booking.status,
+        createdAt: booking.created_at,
+        updatedAt: booking.updated_at,
+        startAt: booking.start_at,
+        locationId: booking.location_id,
+        customerId: booking.customer_id,
+        customerNote: booking.customer_note,
+        appointmentSegments: booking.appointment_segments
       };
     } catch (error) {
-      console.error('Square createBooking error:', error);
-      if (error.errors?.[0]?.code === 'INVALID_VALUE') {
-        throw new AppError(400, error.errors[0].detail || 'Invalid booking data');
+      console.error('Square createBooking error:', error.response?.data || error.message);
+      if (error.response?.data?.errors?.[0]?.code === 'INVALID_VALUE') {
+        throw new AppError(400, error.response.data.errors[0].detail || 'Invalid booking data');
       }
       throw new AppError(500, 'Failed to create booking');
     }
@@ -251,26 +256,27 @@ export default class SquareService {
    */
   async getBookingDetails(bookingId) {
     try {
-      const { result } = await this.client.bookings.retrieveBooking(bookingId);
+      const response = await this.client.get(`/bookings/${bookingId}`);
+      const booking = response.data.booking;
       
       return {
-        id: result.booking.id,
-        version: result.booking.version,
-        status: result.booking.status,
-        createdAt: result.booking.createdAt,
-        updatedAt: result.booking.updatedAt,
-        startAt: result.booking.startAt,
-        locationId: result.booking.locationId,
-        customerId: result.booking.customerId,
-        customerNote: result.booking.customerNote,
-        appointmentSegments: result.booking.appointmentSegments,
-        source: result.booking.source
+        id: booking.id,
+        version: booking.version,
+        status: booking.status,
+        createdAt: booking.created_at,
+        updatedAt: booking.updated_at,
+        startAt: booking.start_at,
+        locationId: booking.location_id,
+        customerId: booking.customer_id,
+        customerNote: booking.customer_note,
+        appointmentSegments: booking.appointment_segments,
+        source: booking.source
       };
     } catch (error) {
-      if (error.statusCode === 404) {
+      if (error.response?.status === 404) {
         throw new AppError(404, 'Booking not found');
       }
-      console.error('Square getBookingDetails error:', error);
+      console.error('Square getBookingDetails error:', error.response?.data || error.message);
       throw new AppError(500, 'Failed to fetch booking details');
     }
   }
@@ -283,21 +289,24 @@ export default class SquareService {
    */
   async cancelBooking(bookingId, bookingVersion) {
     try {
-      const { result } = await this.client.bookings.cancelBooking(bookingId, {
-        bookingVersion
-      });
+      const requestBody = {
+        booking_version: bookingVersion
+      };
+      
+      const response = await this.client.post(`/bookings/${bookingId}/cancel`, requestBody);
+      const booking = response.data.booking;
       
       return {
-        id: result.booking.id,
-        status: result.booking.status,
-        updatedAt: result.booking.updatedAt,
-        canceledAt: result.booking.canceledAt
+        id: booking.id,
+        status: booking.status,
+        updatedAt: booking.updated_at,
+        canceledAt: booking.canceled_at
       };
     } catch (error) {
-      if (error.statusCode === 404) {
+      if (error.response?.status === 404) {
         throw new AppError(404, 'Booking not found');
       }
-      console.error('Square cancelBooking error:', error);
+      console.error('Square cancelBooking error:', error.response?.data || error.message);
       throw new AppError(500, 'Failed to cancel booking');
     }
   }
@@ -308,15 +317,16 @@ export default class SquareService {
    */
   async _getServiceVariationDetails(serviceVariationId) {
     try {
-      const { result } = await this.client.catalog.retrieveCatalogObject(serviceVariationId);
+      const response = await this.client.get(`/catalog/object/${serviceVariationId}`);
+      const object = response.data.object;
       
       return {
-        durationMinutes: result.object?.itemVariationData?.serviceDuration / 60000, // Convert ms to minutes
-        version: result.object?.version
+        durationMinutes: object?.item_variation_data?.service_duration / 60000, // Convert ms to minutes
+        version: object?.version
       };
     } catch (error) {
       console.error('Failed to get service variation details:', error);
-      return { durationMinutes: 30 }; // Default to 30 minutes
+      return { durationMinutes: 30, version: 1 }; // Default to 30 minutes
     }
   }
 }

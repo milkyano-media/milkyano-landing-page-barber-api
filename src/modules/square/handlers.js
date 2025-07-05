@@ -201,7 +201,14 @@ async function checkAvailability(request, reply) {
   const squareService = new SquareService();
 
   try {
-    const availability = await squareService.checkAvailability(request.body);
+    // Convert snake_case from frontend to camelCase for service
+    const availabilityData = {
+      serviceVariationId: request.body.service_variation_id,
+      startAt: request.body.start_at,
+      endAt: request.body.end_at
+    };
+
+    const availability = await squareService.checkAvailability(availabilityData);
     return reply.code(200).send(availability);
   } catch (error) {
     request.log.error(error);

@@ -174,23 +174,18 @@ export const checkAvailabilitySchema = {
   security: [{ bearerAuth: [] }],
   body: {
     type: 'object',
-    required: ['serviceVariationId', 'startAt', 'endAt'],
+    required: ['service_variation_id', 'start_at', 'end_at'],
     properties: {
-      serviceVariationId: { type: 'string', description: 'The ID of the service variation to check availability for' },
-      startAt: { 
+      service_variation_id: { type: 'string', description: 'The ID of the service variation to check availability for' },
+      start_at: { 
         type: 'string',
         format: 'date-time',
         description: 'Start of the time range to check (ISO 8601 date-time)'
       },
-      endAt: { 
+      end_at: { 
         type: 'string',
         format: 'date-time',
         description: 'End of the time range to check (ISO 8601 date-time)'
-      },
-      teamMemberIds: {
-        type: 'array',
-        items: { type: 'string' },
-        description: 'Optional list of specific team member IDs to check'
       }
     }
   },
@@ -204,22 +199,26 @@ export const checkAvailabilitySchema = {
           items: {
             type: 'object',
             properties: {
-              startAt: { type: 'string' },
-              locationId: { type: 'string' },
-              appointmentSegments: {
+              start_at: { type: 'string' },
+              location_id: { type: 'string' },
+              appointment_segments: {
                 type: 'array',
                 items: {
                   type: 'object',
                   properties: {
-                    durationMinutes: { type: 'number' },
-                    serviceVariationId: { type: 'string' },
-                    teamMemberId: { type: 'string' },
-                    serviceVariationVersion: { type: 'number' }
+                    duration_minutes: { type: 'number' },
+                    service_variation_id: { type: 'string' },
+                    team_member_id: { type: 'string' },
+                    service_variation_version: { type: 'number' }
                   }
                 }
               }
             }
           }
+        },
+        errors: {
+          type: 'array',
+          items: { type: 'object' }
         }
       }
     }
