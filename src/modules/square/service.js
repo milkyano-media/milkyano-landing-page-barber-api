@@ -14,30 +14,33 @@ export default class SquareService {
    */
   async getBarbers() {
     try {
-      const { result } = await this.client.team.searchTeamMembers({
+      const requestBody = {
         query: {
           filter: {
-            locationIds: [this.locationId],
+            location_ids: [this.locationId],
             status: 'ACTIVE'
           }
         }
-      });
+      };
 
-      return result.teamMembers?.map(member => ({
+      const response = await this.client.post('/team-members/search', requestBody);
+      const teamMembers = response.data.team_members || [];
+
+      return teamMembers.map(member => ({
         id: member.id,
-        givenName: member.givenName,
-        familyName: member.familyName,
-        displayName: `${member.givenName} ${member.familyName}`,
-        email: member.emailAddress,
-        phoneNumber: member.phoneNumber,
+        givenName: member.given_name,
+        familyName: member.family_name,
+        displayName: `${member.given_name || ''} ${member.family_name || ''}`.trim(),
+        email: member.email_address,
+        phoneNumber: member.phone_number,
         status: member.status,
-        isOwner: member.isOwner || false,
-        createdAt: member.createdAt,
-        updatedAt: member.updatedAt
-      })) || [];
+        isOwner: member.is_owner || false,
+        createdAt: member.created_at,
+        updatedAt: member.updated_at
+      }));
     } catch (error) {
       console.error('Square getBarbers error:', error);
-      throw new AppError('Failed to fetch barbers', 500);
+      throw new AppError(500, 'Failed to fetch barbers');
     }
   }
 
@@ -48,31 +51,31 @@ export default class SquareService {
    */
   async getBarberDetails(barberId) {
     try {
-      const { result } = await this.client.team.retrieveTeamMember(barberId);
-      const member = result.teamMember;
+      const response = await this.client.get(`/team-members/${barberId}`);
+      const member = response.data.team_member;
 
       if (!member) {
-        throw new AppError('Barber not found', 404);
+        throw new AppError(404, 'Barber not found');
       }
 
       return {
         id: member.id,
-        givenName: member.givenName,
-        familyName: member.familyName,
-        displayName: `${member.givenName} ${member.familyName}`,
-        email: member.emailAddress,
-        phoneNumber: member.phoneNumber,
+        givenName: member.given_name,
+        familyName: member.family_name,
+        displayName: `${member.given_name || ''} ${member.family_name || ''}`.trim(),
+        email: member.email_address,
+        phoneNumber: member.phone_number,
         status: member.status,
-        isOwner: member.isOwner || false,
-        createdAt: member.createdAt,
-        updatedAt: member.updatedAt
+        isOwner: member.is_owner || false,
+        createdAt: member.created_at,
+        updatedAt: member.updated_at
       };
     } catch (error) {
-      if (error.statusCode === 404) {
-        throw new AppError('Barber not found', 404);
+      if (error.response?.status === 404) {
+        throw new AppError(404, 'Barber not found');
       }
       console.error('Square getBarberDetails error:', error);
-      throw new AppError('Failed to fetch barber details', 500);
+      throw new AppError(500, 'Failed to fetch barber details');
     }
   }
 
@@ -84,21 +87,23 @@ export default class SquareService {
    */
   async getServices(filter, type) {
     try {
-      const { result } = await this.client.catalog.listCatalog({
-        types: 'ITEM'
+      const response = await this.client.get('/catalog/list', {
+        params: {
+          types: 'ITEM'
+        }
       });
 
-      let services = result.objects?.filter(item => {
+      let services = response.data.objects?.filter(item => {
         // Filter for service items (not products)
         return item.type === 'ITEM' && 
-               item.itemData?.productType === 'APPOINTMENTS_SERVICE';
+               item.item_data?.product_type === 'APPOINTMENTS_SERVICE';
       }) || [];
 
       // Apply custom filters if provided
       if (filter) {
         services = services.filter(service => {
-          const name = service.itemData?.name?.toLowerCase() || '';
-          const description = service.itemData?.description?.toLowerCase() || '';
+          const name = service.item_data?.name?.toLowerCase() || '';
+          const description = service.item_data?.description?.toLowerCase() || '';
           const filterLower = filter.toLowerCase();
           return name.includes(filterLower) || description.includes(filterLower);
         });
@@ -106,25 +111,25 @@ export default class SquareService {
 
       return services.map(service => ({
         id: service.id,
-        name: service.itemData?.name,
-        description: service.itemData?.description,
-        category: service.itemData?.categoryId,
-        variations: service.itemData?.variations?.map(variation => ({
+        name: service.item_data?.name,
+        description: service.item_data?.description,
+        category: service.item_data?.category_id,
+        variations: service.item_data?.variations?.map(variation => ({
           id: variation.id,
-          name: variation.itemVariationData?.name,
+          name: variation.item_variation_data?.name,
           price: {
-            amount: variation.itemVariationData?.priceMoney?.amount,
-            currency: variation.itemVariationData?.priceMoney?.currency
+            amount: variation.item_variation_data?.price_money?.amount,
+            currency: variation.item_variation_data?.price_money?.currency
           },
-          serviceDuration: variation.itemVariationData?.serviceDuration,
-          availableForBooking: variation.itemVariationData?.availableForBooking || true
+          serviceDuration: variation.item_variation_data?.service_duration,
+          availableForBooking: variation.item_variation_data?.available_for_booking !== false
         })) || [],
-        isDeleted: service.isDeleted || false,
-        updatedAt: service.updatedAt
+        isDeleted: service.is_deleted || false,
+        updatedAt: service.updated_at
       }));
     } catch (error) {
       console.error('Square getServices error:', error);
-      throw new AppError('Failed to fetch services', 500);
+      throw new AppError(500, 'Failed to fetch services');
     }
   }
 
@@ -169,7 +174,7 @@ export default class SquareService {
       };
     } catch (error) {
       console.error('Square checkAvailability error:', error);
-      throw new AppError('Failed to check availability', 500);
+      throw new AppError(500, 'Failed to check availability');
     }
   }
 
@@ -215,9 +220,9 @@ export default class SquareService {
     } catch (error) {
       console.error('Square createBooking error:', error);
       if (error.errors?.[0]?.code === 'INVALID_VALUE') {
-        throw new AppError(error.errors[0].detail || 'Invalid booking data', 400);
+        throw new AppError(400, error.errors[0].detail || 'Invalid booking data');
       }
-      throw new AppError('Failed to create booking', 500);
+      throw new AppError(500, 'Failed to create booking');
     }
   }
 
@@ -245,10 +250,10 @@ export default class SquareService {
       };
     } catch (error) {
       if (error.statusCode === 404) {
-        throw new AppError('Booking not found', 404);
+        throw new AppError(404, 'Booking not found');
       }
       console.error('Square getBookingDetails error:', error);
-      throw new AppError('Failed to fetch booking details', 500);
+      throw new AppError(500, 'Failed to fetch booking details');
     }
   }
 
@@ -272,10 +277,10 @@ export default class SquareService {
       };
     } catch (error) {
       if (error.statusCode === 404) {
-        throw new AppError('Booking not found', 404);
+        throw new AppError(404, 'Booking not found');
       }
       console.error('Square cancelBooking error:', error);
-      throw new AppError('Failed to cancel booking', 500);
+      throw new AppError(500, 'Failed to cancel booking');
     }
   }
 
