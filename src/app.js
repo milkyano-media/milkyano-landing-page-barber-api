@@ -82,7 +82,9 @@ export default function build(opts = {}) {
   const corsOrigins = process.env.CORS_ORIGINS?.split(',') || ['http://localhost:5173'];
   app.register(cors, {
     origin: corsOrigins,
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization']
   });
 
   // Register plugins
