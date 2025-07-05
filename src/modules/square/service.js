@@ -122,7 +122,8 @@ export default class SquareService {
             currency: variation.item_variation_data?.price_money?.currency
           },
           serviceDuration: variation.item_variation_data?.service_duration,
-          availableForBooking: variation.item_variation_data?.available_for_booking !== false
+          availableForBooking: variation.item_variation_data?.available_for_booking !== false,
+          teamMemberIds: variation.item_variation_data?.team_member_ids || []
         })) || [],
         isDeleted: service.is_deleted || false,
         updatedAt: service.updated_at

@@ -8,20 +8,18 @@ export const getBarbersSchema = {
   response: {
     200: {
       description: 'List of barbers retrieved successfully',
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          givenName: { type: 'string' },
-          familyName: { type: 'string' },
-          displayName: { type: 'string' },
-          email: { type: ['string', 'null'] },
-          phoneNumber: { type: ['string', 'null'] },
-          status: { type: 'string' },
-          isOwner: { type: 'boolean' },
-          createdAt: { type: 'string' },
-          updatedAt: { type: 'string' }
+      type: 'object',
+      properties: {
+        team_member_booking_profiles: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              team_member_id: { type: 'string' },
+              display_name: { type: 'string' },
+              is_bookable: { type: 'boolean' }
+            }
+          }
         }
       }
     }
@@ -75,35 +73,88 @@ export const getServicesSchema = {
   response: {
     200: {
       description: 'List of services retrieved successfully',
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          name: { type: 'string' },
-          description: { type: ['string', 'null'] },
-          category: { type: ['string', 'null'] },
-          variations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                name: { type: 'string' },
-                price: {
-                  type: 'object',
-                  properties: {
-                    amount: { type: ['number', 'null'] },
-                    currency: { type: ['string', 'null'] }
+      type: 'object',
+      properties: {
+        objects: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string' },
+              id: { type: 'string' },
+              updated_at: { type: 'string' },
+              created_at: { type: 'string' },
+              version: { type: 'number' },
+              is_deleted: { type: 'boolean' },
+              present_at_all_locations: { type: 'boolean' },
+              item_data: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  description: { type: ['string', 'null'] },
+                  variations: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        type: { type: 'string' },
+                        id: { type: 'string' },
+                        updated_at: { type: 'string' },
+                        created_at: { type: 'string' },
+                        version: { type: 'number' },
+                        is_deleted: { type: 'boolean' },
+                        present_at_all_locations: { type: 'boolean' },
+                        item_variation_data: {
+                          type: 'object',
+                          properties: {
+                            item_id: { type: 'string' },
+                            name: { type: 'string' },
+                            ordinal: { type: 'number' },
+                            pricing_type: { type: 'string' },
+                            price_money: {
+                              type: 'object',
+                              properties: {
+                                amount: { type: ['number', 'null'] },
+                                currency: { type: ['string', 'null'] }
+                              }
+                            },
+                            service_duration: { type: ['number', 'null'] },
+                            price_description: { type: 'string' },
+                            available_for_booking: { type: 'boolean' },
+                            sellable: { type: 'boolean' },
+                            stockable: { type: 'boolean' },
+                            team_member_ids: {
+                              type: 'array',
+                              items: { type: 'string' }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  product_type: { type: 'string' },
+                  skip_modifier_screen: { type: 'boolean' },
+                  visibility: { type: 'string' },
+                  tax_ids: {
+                    type: 'array',
+                    items: { type: 'string' }
+                  },
+                  is_taxable: { type: 'boolean' },
+                  ecom_visibility: { type: 'string' },
+                  is_archived: { type: 'boolean' },
+                  channels: {
+                    type: 'array',
+                    items: { type: 'string' }
                   }
-                },
-                serviceDuration: { type: ['number', 'null'] },
-                availableForBooking: { type: 'boolean' }
+                }
               }
             }
-          },
-          isDeleted: { type: 'boolean' },
-          updatedAt: { type: 'string' }
+          }
+        },
+        cursor: { type: 'string' },
+        matched_variation_ids: {
+          type: 'array',
+          items: { type: 'string' }
         }
       }
     }
