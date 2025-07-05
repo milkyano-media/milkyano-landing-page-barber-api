@@ -83,34 +83,48 @@ export default class SquareService {
   }
 
   /**
-   * Get all services (catalog items)
-   * @param {string} filter - Optional filter (e.g., 'HAIR', 'BEARD')
-   * @param {string} type - Optional type filter
+   * Get all services (catalog items) using search endpoint
+   * @param {string} filter - Barber name filter (e.g., 'Rayhan', 'all')
+   * @param {string} type - Service type filter (e.g., 'O', 'M')
    * @returns {Promise<Array>} List of services
    */
   async getServices(filter, type) {
     try {
-      const response = await this.client.get('/catalog/list', {
-        params: {
-          types: 'ITEM'
-        }
-      });
-
-      let services = response.data.objects?.filter(item => {
-        // Filter for service items (not products)
-        return item.type === 'ITEM' && 
-               item.item_data?.product_type === 'APPOINTMENTS_SERVICE';
-      }) || [];
-
-      // Apply custom filters if provided
-      if (filter) {
-        services = services.filter(service => {
-          const name = service.item_data?.name?.toLowerCase() || '';
-          const description = service.item_data?.description?.toLowerCase() || '';
-          const filterLower = filter.toLowerCase();
-          return name.includes(filterLower) || description.includes(filterLower);
-        });
+      // Build search text based on filter
+      let searchText;
+      if (filter === 'all' || !filter) {
+        searchText = 'By'; // Matches all services like "Hair By X", "Beard By Y"
+      } else {
+        searchText = filter;
       }
+
+      // Build search request
+      const requestBody = {
+        object_types: ['ITEM'],
+        query: {
+          text_query: {
+            keywords: type ? [`${searchText} (${type})`] : [searchText]
+          }
+        }
+      };
+
+      console.log('Searching catalog with:', requestBody);
+      const response = await this.client.post('/catalog/search', requestBody);
+
+      let services = response.data.objects || [];
+
+      // Filter by type if specified
+      if (type) {
+        services = services.filter(item => 
+          item.item_data?.name?.includes(`(${type})`)
+        );
+      }
+
+      // Only include appointment services
+      services = services.filter(item => 
+        item.type === 'ITEM' && 
+        item.item_data?.product_type === 'APPOINTMENTS_SERVICE'
+      );
 
       return services.map(service => ({
         id: service.id,
@@ -132,7 +146,7 @@ export default class SquareService {
         updatedAt: service.updated_at
       }));
     } catch (error) {
-      console.error('Square getServices error:', error);
+      console.error('Square getServices error:', error.response?.data || error.message);
       throw new AppError(500, 'Failed to fetch services');
     }
   }

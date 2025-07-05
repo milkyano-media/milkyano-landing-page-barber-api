@@ -24,6 +24,19 @@ const app = buildApp({
 
 const start = async () => {
   try {
+    // Wait for the app to be ready (plugins loaded)
+    await app.ready();
+    
+    // Clear Redis cache on startup if Redis is available
+    if (app.redis) {
+      try {
+        await app.redis.flushdb();
+        app.log.info('🧹 Redis cache cleared on startup');
+      } catch (redisError) {
+        app.log.warn('⚠️  Failed to clear Redis cache:', redisError.message);
+      }
+    }
+    
     const port = process.env.PORT || 3000;
     await app.listen({ port, host: '0.0.0.0' });
     
@@ -40,6 +53,9 @@ const start = async () => {
     app.log.info(`📚 API Documentation: ${docsUrl}`);
     app.log.info(`🔌 API Endpoints: ${apiUrl}`);
     app.log.info(`🔍 Health Check: ${serverUrl}/health`);
+    if (app.redis) {
+      app.log.info(`🗄️  Redis Cache: Connected and cleared`);
+    }
     app.log.info('='.repeat(60));
   } catch (err) {
     app.log.error(err);
