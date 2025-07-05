@@ -9,37 +9,40 @@ export default class SquareService {
   }
 
   /**
-   * Get all barbers (team members)
-   * @returns {Promise<Array>} List of barbers
+   * Get all barbers (team members) using booking profiles endpoint
+   * @returns {Promise<Array>} List of barbers with booking profiles
    */
   async getBarbers() {
     try {
-      const requestBody = {
-        query: {
-          filter: {
-            location_ids: [this.locationId],
-            status: 'ACTIVE'
-          }
+      console.log('Fetching team member booking profiles...');
+      
+      const response = await this.client.get('/bookings/team-member-booking-profiles', {
+        params: {
+          bookable_only: true,
+          location_id: this.locationId
         }
-      };
+      });
 
-      const response = await this.client.post('/team-members/search', requestBody);
-      const teamMembers = response.data.team_members || [];
+      const profiles = response.data.team_member_booking_profiles || [];
+      console.log(`Found ${profiles.length} booking profiles`);
 
-      return teamMembers.map(member => ({
-        id: member.id,
-        givenName: member.given_name,
-        familyName: member.family_name,
-        displayName: `${member.given_name || ''} ${member.family_name || ''}`.trim(),
-        email: member.email_address,
-        phoneNumber: member.phone_number,
-        status: member.status,
-        isOwner: member.is_owner || false,
-        createdAt: member.created_at,
-        updatedAt: member.updated_at
+      // Return the profiles with normalized field names
+      return profiles.map(profile => ({
+        id: profile.team_member_id,
+        displayName: profile.display_name,
+        isBookable: profile.is_bookable || true,
+        // These fields are not in the booking profile response, but we keep them for compatibility
+        givenName: null,
+        familyName: null,
+        email: null,
+        phoneNumber: null,
+        status: 'ACTIVE',
+        isOwner: false,
+        createdAt: null,
+        updatedAt: null
       }));
     } catch (error) {
-      console.error('Square getBarbers error:', error);
+      console.error('Square getBarbers error:', error.response?.data || error.message);
       throw new AppError(500, 'Failed to fetch barbers');
     }
   }

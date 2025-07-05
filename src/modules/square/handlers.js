@@ -1,43 +1,47 @@
 // src/modules/square/handlers.js
 import SquareService from "./service.js";
 
+// Helper function to format barber data for frontend
+function formatBarberProfile(barber) {
+  return {
+    team_member_id: barber.id,
+    display_name: barber.displayName,
+    is_bookable: barber.isBookable !== undefined ? barber.isBookable : true
+  };
+}
+
 async function getBarbers(request, reply) {
   const squareService = new SquareService();
+  const { bypass_cache } = request.query;
   const cacheKey = "barbers:all";
   const cacheTTL = parseInt(process.env.CACHE_TTL_BARBERS || "86400"); // 1 day default
 
   try {
-    // Check cache if Redis is available
-    if (this.redis) {
+    let barbers;
+    
+    // Check cache if Redis is available and bypass_cache is not set
+    if (this.redis && !bypass_cache) {
       const cached = await this.redis.get(cacheKey);
       if (cached) {
         console.log("getBarbers from cache");
-        const cachedData = JSON.parse(cached);
-        // Return wrapped response for frontend compatibility
-        return reply.code(200).send({
-          team_member_booking_profiles: cachedData.map(barber => ({
-            team_member_id: barber.id,
-            display_name: barber.displayName,
-            is_bookable: barber.isBookable !== undefined ? barber.isBookable : true
-          }))
-        });
+        barbers = JSON.parse(cached);
       }
     }
-
-    const barbers = await squareService.getBarbers();
-
-    // Cache the result if Redis is available
-    if (this.redis && barbers.length > 0) {
-      await this.redis.setex(cacheKey, cacheTTL, JSON.stringify(barbers));
+    
+    // Fetch from Square if not cached
+    if (!barbers) {
+      console.log("getBarbers from square");
+      barbers = await squareService.getBarbers();
+      
+      // Cache the result if Redis is available
+      if (this.redis && barbers.length > 0) {
+        await this.redis.setex(cacheKey, cacheTTL, JSON.stringify(barbers));
+      }
     }
 
     // Return wrapped response for frontend compatibility
     return reply.code(200).send({
-      team_member_booking_profiles: barbers.map(barber => ({
-        team_member_id: barber.id,
-        display_name: barber.displayName,
-        is_bookable: barber.isBookable !== undefined ? barber.isBookable : true
-      }))
+      team_member_booking_profiles: barbers.map(formatBarberProfile)
     });
   } catch (error) {
     request.log.error(error);
@@ -109,7 +113,7 @@ async function getServices(request, reply) {
         const transformedServices = transformServices(cachedData);
         return reply.code(200).send({
           objects: transformedServices,
-          cursor: '',
+          cursor: "",
           matched_variation_ids: []
         });
       }
@@ -126,7 +130,7 @@ async function getServices(request, reply) {
     const transformedServices = transformServices(services);
     return reply.code(200).send({
       objects: transformedServices,
-      cursor: '',
+      cursor: "",
       matched_variation_ids: []
     });
   } catch (error) {
@@ -146,8 +150,8 @@ async function getServices(request, reply) {
 
 // Helper function to transform services to match frontend format
 function transformServices(services) {
-  return services.map(service => ({
-    type: 'ITEM',
+  return services.map((service) => ({
+    type: "ITEM",
     id: service.id,
     updated_at: service.updatedAt,
     created_at: service.updatedAt,
@@ -157,8 +161,8 @@ function transformServices(services) {
     item_data: {
       name: service.name,
       description: service.description,
-      variations: service.variations.map(variation => ({
-        type: 'ITEM_VARIATION',
+      variations: service.variations.map((variation) => ({
+        type: "ITEM_VARIATION",
         id: variation.id,
         updated_at: service.updatedAt,
         created_at: service.updatedAt,
@@ -169,24 +173,26 @@ function transformServices(services) {
           item_id: service.id,
           name: variation.name,
           ordinal: 0,
-          pricing_type: 'FIXED_PRICING',
+          pricing_type: "FIXED_PRICING",
           price_money: variation.price,
           service_duration: variation.serviceDuration,
-          price_description: `$${(variation.price.amount / 100).toFixed(2)} ${variation.price.currency} - ${Math.floor(variation.serviceDuration / 60000)} mins`,
+          price_description: `$${(variation.price.amount / 100).toFixed(2)} ${
+            variation.price.currency
+          } - ${Math.floor(variation.serviceDuration / 60000)} mins`,
           available_for_booking: variation.availableForBooking,
           sellable: true,
           stockable: false,
           team_member_ids: variation.teamMemberIds || []
         }
       })),
-      product_type: 'APPOINTMENTS_SERVICE',
+      product_type: "APPOINTMENTS_SERVICE",
       skip_modifier_screen: false,
-      visibility: 'PUBLIC',
+      visibility: "PUBLIC",
       tax_ids: [],
       is_taxable: false,
-      ecom_visibility: 'UNINDEXED',
+      ecom_visibility: "UNINDEXED",
       is_archived: false,
-      channels: ['CH_WEBSTORE']
+      channels: ["CH_WEBSTORE"]
     }
   }));
 }

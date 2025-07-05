@@ -5,6 +5,12 @@ export const getBarbersSchema = {
   summary: 'Get all barbers',
   description: 'Retrieves a list of all barbers/team members from Square',
   security: [{ bearerAuth: [] }],
+  querystring: {
+    type: 'object',
+    properties: {
+      bypass_cache: { type: 'boolean', description: 'Bypass cache and fetch fresh data from Square' }
+    }
+  },
   response: {
     200: {
       description: 'List of barbers retrieved successfully',
