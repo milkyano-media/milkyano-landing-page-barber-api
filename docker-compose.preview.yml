@@ -1,0 +1,126 @@
+# Preview deployment configuration
+# Usage: docker-compose -f docker-compose.preview.yml up -d
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Preview
+  postgres-preview:
+    image: postgres:16-alpine
+    container_name: barber-core-db-preview
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${PREVIEW_DB_NAME:-barber_core_api_preview}
+    ports:
+      - "${PREVIEW_DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_preview_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - barber-preview-network
+
+  # Redis Cache for Preview
+  redis-preview:
+    image: redis:7-alpine
+    container_name: barber-core-redis-preview
+    ports:
+      - "${PREVIEW_REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_preview_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - barber-preview-network
+
+  # Barber Core API Preview
+  api-preview:
+    image: syahiidkamiltech/barber-core-api-preview:latest
+    container_name: barber-core-api-preview
+    environment:
+      # Server Configuration
+      PORT: ${PREVIEW_PORT:-3001}
+      NODE_ENV: production
+      
+      # Database
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@postgres-preview:5432/${PREVIEW_DB_NAME:-barber_core_api_preview}
+      
+      # JWT Configuration (can use different secrets for preview)
+      JWT_SECRET: ${PREVIEW_JWT_SECRET:-${JWT_SECRET}}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_ACCESS_TOKEN_EXPIRES_IN: ${JWT_ACCESS_TOKEN_EXPIRES_IN:-1d}
+      JWT_REFRESH_TOKEN_SECRET: ${PREVIEW_JWT_REFRESH_TOKEN_SECRET:-${JWT_REFRESH_TOKEN_SECRET}}
+      JWT_REFRESH_TOKEN_EXPIRES_IN: ${JWT_REFRESH_TOKEN_EXPIRES_IN:-90d}
+      JWT_ISSUER: ${JWT_ISSUER:-barber-core-api-preview}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-milkyano-barber-web}
+      
+      # Square API (can use sandbox for preview)
+      SQUARE_ACCESS_TOKEN: ${PREVIEW_SQUARE_ACCESS_TOKEN:-${SQUARE_ACCESS_TOKEN}}
+      SQUARE_LOCATION_ID: ${PREVIEW_SQUARE_LOCATION_ID:-${SQUARE_LOCATION_ID}}
+      SQUARE_ENVIRONMENT: ${PREVIEW_SQUARE_ENVIRONMENT:-sandbox}
+      SQUARE_API_VERSION: ${SQUARE_API_VERSION:-2024-06-04}
+      
+      # Twilio (optional for preview)
+      TWILIO_ACCOUNT_SID: ${PREVIEW_TWILIO_ACCOUNT_SID:-${TWILIO_ACCOUNT_SID}}
+      TWILIO_AUTH_TOKEN: ${PREVIEW_TWILIO_AUTH_TOKEN:-${TWILIO_AUTH_TOKEN}}
+      TWILIO_SMS_SID: ${PREVIEW_TWILIO_SMS_SID:-${TWILIO_SMS_SID}}
+      
+      # Mock OTP for preview
+      MOCK_OTP: ${PREVIEW_MOCK_OTP:-123456}
+      
+      # Redis
+      REDIS_URL: redis://redis-preview:6379
+      CACHE_TTL_BARBERS: ${CACHE_TTL_BARBERS:-86400}
+      CACHE_TTL_SERVICES: ${CACHE_TTL_SERVICES:-86400}
+      
+      # Security
+      CORS_ORIGINS: ${PREVIEW_CORS_ORIGINS:-${CORS_ORIGINS:-http://localhost:5173}}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-15m}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      
+      # Logger
+      LOGTAIL_SOURCE_TOKEN: ${PREVIEW_LOGTAIL_SOURCE_TOKEN:-}
+      LOGTAIL_INGESTING_HOST: ${LOGTAIL_INGESTING_HOST:-logs.betterstack.com}
+      
+      # Security Keys
+      X_SECRET_KEY: ${PREVIEW_X_SECRET_KEY:-${X_SECRET_KEY}}
+    ports:
+      - "${PREVIEW_PORT:-3001}:${PREVIEW_PORT:-3001}"
+    depends_on:
+      postgres-preview:
+        condition: service_healthy
+      redis-preview:
+        condition: service_healthy
+    networks:
+      - barber-preview-network
+    restart: unless-stopped
+
+  # Migration service for preview
+  migrate-preview:
+    image: syahiidkamiltech/barber-core-api-preview:latest
+    container_name: barber-core-migrate-preview
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@postgres-preview:5432/${PREVIEW_DB_NAME:-barber_core_api_preview}
+    command: npx prisma migrate deploy
+    depends_on:
+      postgres-preview:
+        condition: service_healthy
+    networks:
+      - barber-preview-network
+    profiles:
+      - tools
+
+volumes:
+  postgres_preview_data:
+  redis_preview_data:
+
+networks:
+  barber-preview-network:
+    driver: bridge

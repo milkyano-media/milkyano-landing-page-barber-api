@@ -1,0 +1,129 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: barber-core-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-barber_core_api_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - barber-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: barber-core-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - barber-network
+
+  # Barber Core API (Production)
+  api:
+    image: syahiidkamiltech/barber-core-api:latest
+    container_name: barber-core-api
+    environment:
+      # Server Configuration
+      PORT: ${PORT:-3000}
+      NODE_ENV: production
+      
+      # Database
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-barber_core_api_db}
+      
+      # JWT Configuration
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_ACCESS_TOKEN_EXPIRES_IN: ${JWT_ACCESS_TOKEN_EXPIRES_IN:-1d}
+      JWT_REFRESH_TOKEN_SECRET: ${JWT_REFRESH_TOKEN_SECRET}
+      JWT_REFRESH_TOKEN_EXPIRES_IN: ${JWT_REFRESH_TOKEN_EXPIRES_IN:-90d}
+      JWT_ISSUER: ${JWT_ISSUER:-barber-core-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-milkyano-barber-web}
+      
+      # Square API
+      SQUARE_ACCESS_TOKEN: ${SQUARE_ACCESS_TOKEN}
+      SQUARE_LOCATION_ID: ${SQUARE_LOCATION_ID}
+      SQUARE_ENVIRONMENT: ${SQUARE_ENVIRONMENT:-sandbox}
+      SQUARE_API_VERSION: ${SQUARE_API_VERSION:-2024-06-04}
+      
+      # Twilio
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_SMS_SID: ${TWILIO_SMS_SID}
+      
+      # Mock OTP
+      MOCK_OTP: ${MOCK_OTP:-}
+      
+      # Redis
+      REDIS_URL: redis://redis:6379
+      CACHE_TTL_BARBERS: ${CACHE_TTL_BARBERS:-86400}
+      CACHE_TTL_SERVICES: ${CACHE_TTL_SERVICES:-86400}
+      
+      # Security
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-15m}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      
+      # Logger
+      LOGTAIL_SOURCE_TOKEN: ${LOGTAIL_SOURCE_TOKEN:-}
+      LOGTAIL_INGESTING_HOST: ${LOGTAIL_INGESTING_HOST:-logs.betterstack.com}
+      LOGGER_FILE: ${LOGGER_FILE:-}
+      
+      # Security Keys
+      X_SECRET_KEY: ${X_SECRET_KEY}
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Mount logs directory if LOGGER_FILE is set
+      - ./logs:/app/logs
+    networks:
+      - barber-network
+    restart: unless-stopped
+
+  # Manual migration service (run with: docker-compose run --rm migrate)
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: barber-core-migrate
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-barber_core_api_db}
+    command: npx prisma migrate deploy
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - barber-network
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  barber-network:
+    driver: bridge
