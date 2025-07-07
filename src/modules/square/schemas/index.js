@@ -360,3 +360,104 @@ export const cancelBookingSchema = {
     }
   }
 };
+
+export const createCustomerSchema = {
+  tags: ['square'],
+  summary: 'Create a new customer',
+  description: 'Creates a new customer in Square',
+  body: {
+    type: 'object',
+    required: ['given_name', 'family_name', 'email_address', 'phone_number'],
+    properties: {
+      given_name: { type: 'string', minLength: 1 },
+      family_name: { type: 'string', minLength: 1 },
+      email_address: { type: 'string', format: 'email' },
+      phone_number: { type: 'string' },
+      idempotency_key: { type: 'string' }
+    }
+  },
+  response: {
+    200: {
+      description: 'Customer created successfully',
+      type: 'object',
+      properties: {
+        customer: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            created_at: { type: 'string' },
+            updated_at: { type: 'string' },
+            given_name: { type: 'string' },
+            family_name: { type: 'string' },
+            email_address: { type: 'string' },
+            phone_number: { type: 'string' }
+          }
+        }
+      }
+    }
+  }
+};
+
+export const findCustomerSchema = {
+  tags: ['square'],
+  summary: 'Find customer by email and phone',
+  description: 'Search for a customer by email and phone number',
+  querystring: {
+    type: 'object',
+    required: ['email', 'phone'],
+    properties: {
+      email: { type: 'string', format: 'email' },
+      phone: { type: 'string' }
+    }
+  },
+  response: {
+    200: {
+      description: 'Customer found',
+      type: 'object',
+      properties: {
+        customer: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            created_at: { type: 'string' },
+            updated_at: { type: 'string' },
+            given_name: { type: 'string' },
+            family_name: { type: 'string' },
+            email_address: { type: 'string' },
+            phone_number: { type: 'string' }
+          }
+        }
+      }
+    },
+    404: {
+      description: 'Customer not found',
+      type: 'object',
+      properties: {
+        error: { type: 'string' }
+      }
+    }
+  }
+};
+
+export const getCustomerStatusSchema = {
+  tags: ['square'],
+  summary: 'Check if customer exists',
+  description: 'Check if a customer exists by email and phone number',
+  querystring: {
+    type: 'object',
+    required: ['email', 'phone'],
+    properties: {
+      email: { type: 'string', format: 'email' },
+      phone: { type: 'string' }
+    }
+  },
+  response: {
+    200: {
+      description: 'Customer status',
+      type: 'object',
+      properties: {
+        new_customer: { type: 'boolean' }
+      }
+    }
+  }
+};

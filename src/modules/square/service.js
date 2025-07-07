@@ -3,9 +3,10 @@ import { getSquareClient, SQUARE_LOCATION_ID } from './utils/client.js';
 import { AppError } from '../../utils/errors.js';
 
 export default class SquareService {
-  constructor() {
+  constructor(prisma) {
     this.client = getSquareClient();
     this.locationId = SQUARE_LOCATION_ID;
+    this.prisma = prisma;
   }
 
   /**
@@ -204,10 +205,56 @@ export default class SquareService {
       // Extract the booking object from the request
       const { booking } = bookingRequest;
       
+      // Check if we need to translate user ID to Square customer ID
+      let finalCustomerId = booking.customer_id;
+      
+      if (this.prisma && booking.customer_id) {
+        const user = await this.prisma.user.findUnique({
+          where: { id: booking.customer_id }
+        });
+        
+        if (user) {
+          if (user.squareupId) {
+            // User has Square customer ID, use it
+            console.log(`Using existing Square ID ${user.squareupId} for user ${user.id}`);
+            finalCustomerId = user.squareupId;
+          } else {
+            // User exists but no Square customer yet, create one
+            console.log(`Creating Square customer for user ${user.id}`);
+            const idempotencyKey = `migrate-${user.phoneNumber}-${Date.now()}`;
+            
+            try {
+              const customerResponse = await this.client.post('/customers', {
+                idempotency_key: idempotencyKey,
+                given_name: user.firstName,
+                family_name: user.lastName,
+                phone_number: user.phoneNumber,
+                email_address: user.email
+              });
+              
+              const newSquareCustomerId = customerResponse.data.customer.id;
+              console.log(`Created Square customer ${newSquareCustomerId} for user ${user.id}`);
+              
+              // Update user with Square customer ID
+              await this.prisma.user.update({
+                where: { id: user.id },
+                data: { squareupId: newSquareCustomerId }
+              });
+              
+              finalCustomerId = newSquareCustomerId;
+            } catch (customerError) {
+              console.error('Failed to create Square customer:', customerError.response?.data || customerError.message);
+              throw new AppError(500, 'Failed to create customer in Square');
+            }
+          }
+        }
+      }
+      
       // Add required fields if not present
       const requestBody = {
         booking: {
           ...booking,
+          customer_id: finalCustomerId,
           location_type: 'BUSINESS_LOCATION',
           seller_note: booking.seller_note || ''
         }
@@ -216,22 +263,8 @@ export default class SquareService {
       console.log('Creating booking with:', JSON.stringify(requestBody, null, 2));
       const response = await this.client.post('/bookings', requestBody);
       
-      const createdBooking = response.data.booking;
-      
-      return {
-        id: createdBooking.id,
-        version: createdBooking.version,
-        status: createdBooking.status,
-        created_at: createdBooking.created_at,
-        updated_at: createdBooking.updated_at,
-        location_id: createdBooking.location_id,
-        customer_id: createdBooking.customer_id,
-        customer_note: createdBooking.customer_note,
-        start_at: createdBooking.start_at,
-        all_day: createdBooking.all_day || false,
-        appointment_segments: createdBooking.appointment_segments,
-        source: createdBooking.source || 'API'
-      };
+      // Return the complete booking object from Square
+      return response.data.booking;
     } catch (error) {
       console.error('Square createBooking error:', error.response?.data || error.message);
       if (error.response?.data?.errors?.[0]?.code === 'INVALID_VALUE') {
@@ -300,6 +333,83 @@ export default class SquareService {
       }
       console.error('Square cancelBooking error:', error.response?.data || error.message);
       throw new AppError(500, 'Failed to cancel booking');
+    }
+  }
+
+  /**
+   * Create a customer
+   * @param {Object} customerData - Customer details
+   * @returns {Promise<Object>} Created customer
+   */
+  async createCustomer(customerData) {
+    try {
+      const response = await this.client.post('/customers', customerData);
+      return response.data;
+    } catch (error) {
+      console.error('Square createCustomer error:', error.response?.data || error.message);
+      if (error.response?.data?.errors?.[0]?.code === 'INVALID_VALUE') {
+        throw new AppError(400, error.response.data.errors[0].detail || 'Invalid customer data');
+      }
+      throw new AppError(500, 'Failed to create customer');
+    }
+  }
+
+  /**
+   * Search for customers by email and phone
+   * @param {string} email - Customer email
+   * @param {string} phone - Customer phone number
+   * @returns {Promise<Object|null>} Customer if found, null otherwise
+   */
+  async findCustomerByEmailAndPhone(email, phone) {
+    try {
+      // First try to search by email
+      const emailSearchBody = {
+        filter: {
+          email_address: {
+            exact: email
+          }
+        }
+      };
+
+      console.log('Searching for customer with email:', email);
+      const emailResponse = await this.client.post('/customers/search', emailSearchBody);
+      const customersByEmail = emailResponse.data.customers || [];
+      
+      // If we found customers by email, check if any match the phone number
+      if (customersByEmail.length > 0) {
+        const matchingCustomer = customersByEmail.find(customer => 
+          customer.phone_number === phone
+        );
+        
+        if (matchingCustomer) {
+          console.log('Found customer matching both email and phone');
+          return matchingCustomer;
+        }
+      }
+      
+      // If no match found by email+phone, try searching by phone
+      const phoneSearchBody = {
+        filter: {
+          phone_number: {
+            exact: phone
+          }
+        }
+      };
+      
+      console.log('Searching for customer with phone:', phone);
+      const phoneResponse = await this.client.post('/customers/search', phoneSearchBody);
+      const customersByPhone = phoneResponse.data.customers || [];
+      
+      // Check if any match the email
+      const matchingCustomer = customersByPhone.find(customer => 
+        customer.email_address === email
+      );
+      
+      return matchingCustomer || null;
+    } catch (error) {
+      console.error('Square findCustomer error:', error.response?.data || error.message);
+      // Return null instead of throwing to indicate customer not found
+      return null;
     }
   }
 

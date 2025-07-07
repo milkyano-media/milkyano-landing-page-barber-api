@@ -6,7 +6,10 @@ import {
   checkAvailability,
   createBooking,
   getBookingDetails,
-  cancelBooking
+  cancelBooking,
+  createCustomer,
+  findCustomer,
+  getCustomerStatus
 } from './handlers.js';
 
 import {
@@ -16,7 +19,10 @@ import {
   checkAvailabilitySchema,
   createBookingSchema,
   getBookingDetailsSchema,
-  cancelBookingSchema
+  cancelBookingSchema,
+  createCustomerSchema,
+  findCustomerSchema,
+  getCustomerStatusSchema
 } from './schemas/index.js';
 
 export default async function squareRoutes(fastify, opts) {
@@ -55,6 +61,34 @@ export default async function squareRoutes(fastify, opts) {
       summary: 'Check availability for a service'
     },
     handler: checkAvailability
+  });
+
+  // Customer routes - public
+  fastify.post('/customers', {
+    schema: {
+      ...createCustomerSchema,
+      tags: ['square'],
+      summary: 'Create a customer'
+    },
+    handler: createCustomer
+  });
+
+  fastify.get('/customers/search', {
+    schema: {
+      ...findCustomerSchema,
+      tags: ['square'],
+      summary: 'Find customer by email and phone'
+    },
+    handler: findCustomer
+  });
+
+  fastify.get('/customers/status', {
+    schema: {
+      ...getCustomerStatusSchema,
+      tags: ['square'],
+      summary: 'Check if customer exists'
+    },
+    handler: getCustomerStatus
   });
 
   // Protected routes - authentication required

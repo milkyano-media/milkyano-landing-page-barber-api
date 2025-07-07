@@ -44,32 +44,30 @@ export default class AuthService {
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
     // Create customer in Square
-    let squareCustomerId = null;
-    try {
-      const { result } = await this.squareClient.customers.create({
-        givenName: firstName,
-        familyName: lastName,
-        phoneNumber: formattedPhone,
-        emailAddress: email || undefined
-      });
+    // Generate idempotency key for Square API
+    const idempotencyKey = `register-${formattedPhone}-${Date.now()}`;
+    
+    const response = await this.squareClient.post('/customers', {
+      idempotency_key: idempotencyKey,
+      given_name: firstName,
+      family_name: lastName,
+      phone_number: formattedPhone,
+      email_address: email
+    });
 
-      squareCustomerId = result.customer.id;
-    } catch (error) {
-      console.error("Square customer creation error:", error);
-      // Continue without Square customer ID for now
-    }
+    const squareCustomerId = response.data.customer.id;
 
     // Create user in database
     const user = await this.prisma.user.create({
       data: {
-        id: squareCustomerId || undefined, // Use Square customer ID as user ID if available
         phoneNumber: formattedPhone,
         firstName,
         lastName,
         email: email || null,
         password: hashedPassword,
         role: "CUSTOMER",
-        isVerified: false
+        isVerified: false,
+        squareupId: squareCustomerId // Store Square customer ID in dedicated field
       }
     });
 

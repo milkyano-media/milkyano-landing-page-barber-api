@@ -11,7 +11,7 @@ function formatBarberProfile(barber) {
 }
 
 async function getBarbers(request, reply) {
-  const squareService = new SquareService();
+  const squareService = new SquareService(request.server.prisma);
   const { bypass_cache } = request.query;
   const cacheKey = "barbers:all";
   const cacheTTL = parseInt(process.env.CACHE_TTL_BARBERS || "86400"); // 1 day default
@@ -59,7 +59,7 @@ async function getBarbers(request, reply) {
 }
 
 async function getBarberDetails(request, reply) {
-  const squareService = new SquareService();
+  const squareService = new SquareService(request.server.prisma);
   const cacheKey = `barbers:${request.params.id}`;
   const cacheTTL = parseInt(process.env.CACHE_TTL_BARBERS || "86400"); // 1 day default
 
@@ -97,7 +97,7 @@ async function getBarberDetails(request, reply) {
 }
 
 async function getServices(request, reply) {
-  const squareService = new SquareService();
+  const squareService = new SquareService(request.server.prisma);
   const { filter, type } = request.query;
   const cacheKey = `services:${filter || "all"}:${type || "all"}`;
   const cacheTTL = parseInt(process.env.CACHE_TTL_SERVICES || "86400"); // 1 day default
@@ -198,7 +198,7 @@ function transformServices(services) {
 }
 
 async function checkAvailability(request, reply) {
-  const squareService = new SquareService();
+  const squareService = new SquareService(request.server.prisma);
 
   try {
     // Convert snake_case from frontend to camelCase for service
@@ -226,16 +226,17 @@ async function checkAvailability(request, reply) {
 }
 
 async function createBooking(request, reply) {
-  const squareService = new SquareService();
+  const squareService = new SquareService(request.server.prisma);
 
   try {
     // Pass the booking request as-is to the service
     // The frontend already sends the correct format
     const bookingResponse = await squareService.createBooking(request.body);
     
-    // Return the booking response wrapped in the expected format
+    // Return the booking response in the format expected by frontend
     return reply.code(200).send({
-      booking: bookingResponse
+      booking: bookingResponse,
+      errors: []
     });
   } catch (error) {
     request.log.error(error);
@@ -253,7 +254,7 @@ async function createBooking(request, reply) {
 }
 
 async function getBookingDetails(request, reply) {
-  const squareService = new SquareService();
+  const squareService = new SquareService(request.server.prisma);
 
   try {
     const booking = await squareService.getBookingDetails(request.params.id);
@@ -286,7 +287,7 @@ async function getBookingDetails(request, reply) {
 }
 
 async function cancelBooking(request, reply) {
-  const squareService = new SquareService();
+  const squareService = new SquareService(request.server.prisma);
 
   try {
     // First get booking details to verify ownership
@@ -324,6 +325,83 @@ async function cancelBooking(request, reply) {
   }
 }
 
+async function createCustomer(request, reply) {
+  const squareService = new SquareService(request.server.prisma);
+
+  try {
+    const customer = await squareService.createCustomer(request.body);
+    return reply.code(200).send(customer);
+  } catch (error) {
+    request.log.error(error);
+
+    if (error.statusCode) {
+      return reply.code(error.statusCode).send({
+        error: error.message
+      });
+    }
+
+    return reply.code(500).send({
+      error: "Internal server error"
+    });
+  }
+}
+
+async function findCustomer(request, reply) {
+  const squareService = new SquareService(request.server.prisma);
+
+  try {
+    const { email, phone } = request.query;
+    
+    if (!email || !phone) {
+      return reply.code(400).send({
+        error: "Email and phone are required"
+      });
+    }
+
+    const customer = await squareService.findCustomerByEmailAndPhone(email, phone);
+    
+    if (!customer) {
+      return reply.code(404).send({
+        error: "Customer not found"
+      });
+    }
+
+    return reply.code(200).send({ customer });
+  } catch (error) {
+    request.log.error(error);
+
+    return reply.code(500).send({
+      error: "Internal server error"
+    });
+  }
+}
+
+async function getCustomerStatus(request, reply) {
+  const squareService = new SquareService(request.server.prisma);
+
+  try {
+    const { email, phone } = request.query;
+    
+    if (!email || !phone) {
+      return reply.code(400).send({
+        error: "Email and phone are required"
+      });
+    }
+
+    const customer = await squareService.findCustomerByEmailAndPhone(email, phone);
+    
+    return reply.code(200).send({
+      new_customer: !customer
+    });
+  } catch (error) {
+    request.log.error(error);
+
+    return reply.code(500).send({
+      error: "Internal server error"
+    });
+  }
+}
+
 export {
   getBarbers,
   getBarberDetails,
@@ -331,5 +409,8 @@ export {
   checkAvailability,
   createBooking,
   getBookingDetails,
-  cancelBooking
+  cancelBooking,
+  createCustomer,
+  findCustomer,
+  getCustomerStatus
 };

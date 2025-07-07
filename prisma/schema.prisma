@@ -13,7 +13,8 @@ enum Role {
 }
 
 model User {
-  id                String    @id @default(uuid()) // UUID for admin, square_customer_id for customers
+  id                String    @id @default(uuid())
+  squareupId        String?   @unique // Square customer ID
   role              Role      @default(CUSTOMER)
   phoneNumber       String    @unique
   email             String?   @unique
@@ -27,5 +28,6 @@ model User {
   @@index([phoneNumber])
   @@index([email])
   @@index([role])
+  @@index([squareupId])
   @@map("users")
 }
