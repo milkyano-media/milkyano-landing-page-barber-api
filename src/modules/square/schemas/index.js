@@ -267,20 +267,49 @@ export const createBookingSchema = {
       description: 'Booking created successfully',
       type: 'object',
       properties: {
-        id: { type: 'string' },
-        version: { type: 'number' },
-        status: { type: 'string' },
-        createdAt: { type: 'string' },
-        updatedAt: { type: 'string' },
-        startAt: { type: 'string' },
-        locationId: { type: 'string' },
-        customerId: { type: 'string' },
-        customerNote: { type: ['string', 'null'] },
-        appointmentSegments: {
-          type: 'array',
-          items: {
-            type: 'object'
+        booking: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            version: { type: 'number' },
+            status: { type: 'string' },
+            created_at: { type: 'string' },
+            updated_at: { type: 'string' },
+            start_at: { type: 'string' },
+            location_id: { type: 'string' },
+            customer_id: { type: 'string' },
+            customer_note: { type: ['string', 'null'] },
+            appointment_segments: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  duration_minutes: { type: 'number' },
+                  service_variation_id: { type: 'string' },
+                  team_member_id: { type: 'string' },
+                  service_variation_version: { type: 'number' },
+                  service_variation_client_id: { type: 'string' },
+                  any_team_member: { type: 'boolean' },
+                  intermission_minutes: { type: 'number' }
+                }
+              }
+            },
+            all_day: { type: 'boolean' },
+            transition_time_minutes: { type: 'number' },
+            creator_details: {
+              type: 'object',
+              properties: {
+                creator_type: { type: 'string' },
+                team_member_id: { type: 'string' }
+              }
+            },
+            source: { type: 'string' },
+            location_type: { type: 'string' }
           }
+        },
+        errors: {
+          type: 'array',
+          items: { type: 'object' }
         }
       }
     }

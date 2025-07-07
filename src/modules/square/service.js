@@ -201,72 +201,98 @@ export default class SquareService {
    * @returns {Promise<Object>} Created booking
    */
   async createBooking(bookingRequest) {
-    try {
-      // Extract the booking object from the request
-      const { booking } = bookingRequest;
+    // Extract the booking object from the request
+    const { booking } = bookingRequest;
+    
+    // Step 1: Find user by ID
+    let user = null;
+    let finalCustomerId = booking.customer_id;
+    
+    if (this.prisma && booking.customer_id) {
+      user = await this.prisma.user.findUnique({
+        where: { id: booking.customer_id }
+      });
       
-      // Check if we need to translate user ID to Square customer ID
-      let finalCustomerId = booking.customer_id;
-      
-      if (this.prisma && booking.customer_id) {
-        const user = await this.prisma.user.findUnique({
-          where: { id: booking.customer_id }
-        });
-        
-        if (user) {
-          if (user.squareupId) {
-            // User has Square customer ID, use it
-            console.log(`Using existing Square ID ${user.squareupId} for user ${user.id}`);
-            finalCustomerId = user.squareupId;
-          } else {
-            // User exists but no Square customer yet, create one
-            console.log(`Creating Square customer for user ${user.id}`);
-            const idempotencyKey = `migrate-${user.phoneNumber}-${Date.now()}`;
-            
-            try {
-              const customerResponse = await this.client.post('/customers', {
-                idempotency_key: idempotencyKey,
-                given_name: user.firstName,
-                family_name: user.lastName,
-                phone_number: user.phoneNumber,
-                email_address: user.email
-              });
-              
-              const newSquareCustomerId = customerResponse.data.customer.id;
-              console.log(`Created Square customer ${newSquareCustomerId} for user ${user.id}`);
-              
-              // Update user with Square customer ID
-              await this.prisma.user.update({
-                where: { id: user.id },
-                data: { squareupId: newSquareCustomerId }
-              });
-              
-              finalCustomerId = newSquareCustomerId;
-            } catch (customerError) {
-              console.error('Failed to create Square customer:', customerError.response?.data || customerError.message);
-              throw new AppError(500, 'Failed to create customer in Square');
-            }
-          }
-        }
+      if (user && user.squareupId) {
+        // User has Square customer ID, use it
+        console.log(`Using existing Square ID ${user.squareupId} for user ${user.id}`);
+        finalCustomerId = user.squareupId;
       }
-      
-      // Add required fields if not present
-      const requestBody = {
-        booking: {
-          ...booking,
-          customer_id: finalCustomerId,
-          location_type: 'BUSINESS_LOCATION',
-          seller_note: booking.seller_note || ''
-        }
-      };
+    }
+    
+    // Prepare booking request body
+    const requestBody = {
+      booking: {
+        ...booking,
+        customer_id: finalCustomerId,
+        location_type: 'BUSINESS_LOCATION',
+        seller_note: booking.seller_note || ''
+      }
+    };
 
-      console.log('Creating booking with:', JSON.stringify(requestBody, null, 2));
+    console.log('Creating booking with:', JSON.stringify(requestBody, null, 2));
+    
+    // Step 2: Try to create booking
+    try {
       const response = await this.client.post('/bookings', requestBody);
       
-      // Return the complete booking object from Square
+      // Step 3: Log the response
+      console.log('Booking created successfully:', JSON.stringify(response.data, null, 2));
+      
+      // Step 4: Return the complete booking object
       return response.data.booking;
     } catch (error) {
       console.error('Square createBooking error:', error.response?.data || error.message);
+      
+      // Step 5: Check if error is due to customer_id not found
+      if (error.response?.data?.errors?.[0]?.field === 'customer_id' && 
+          error.response?.data?.errors?.[0]?.detail === 'not found') {
+        
+        console.log(`Customer not found in Square, creating new customer for user ${user.id}`);
+        
+        // Create Square customer
+        const idempotencyKey = `booking-${user.phoneNumber}-${Date.now()}`;
+        
+        try {
+          const customerResponse = await this.client.post('/customers', {
+            idempotency_key: idempotencyKey,
+            given_name: user.firstName,
+            family_name: user.lastName,
+            phone_number: user.phoneNumber,
+            email_address: user.email
+          });
+          
+          const newSquareCustomerId = customerResponse.data.customer.id;
+          console.log(`Created Square customer ${newSquareCustomerId} for user ${user.id}`);
+          
+          // Update user with Square customer ID
+          await this.prisma.user.update({
+            where: { id: user.id },
+            data: { squareupId: newSquareCustomerId }
+          });
+          
+          // Retry booking with new Square customer ID
+          const retryRequestBody = {
+            booking: {
+              ...booking,
+              customer_id: newSquareCustomerId,
+              location_type: 'BUSINESS_LOCATION',
+              seller_note: booking.seller_note || ''
+            }
+          };
+          
+          console.log('Retrying booking with new customer ID:', newSquareCustomerId);
+          const retryResponse = await this.client.post('/bookings', retryRequestBody);
+          
+          console.log('Booking created successfully after customer creation:', JSON.stringify(retryResponse.data, null, 2));
+          return retryResponse.data.booking;
+        } catch (retryError) {
+          console.error('Failed to create customer or retry booking:', retryError.response?.data || retryError.message);
+          throw new AppError(500, 'Failed to create booking after customer creation');
+        }
+      }
+      
+      // Other errors
       if (error.response?.data?.errors?.[0]?.code === 'INVALID_VALUE') {
         throw new AppError(400, error.response.data.errors[0].detail || 'Invalid booking data');
       }
