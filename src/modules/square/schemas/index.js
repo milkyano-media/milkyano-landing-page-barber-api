@@ -232,19 +232,33 @@ export const createBookingSchema = {
   security: [{ bearerAuth: [] }],
   body: {
     type: 'object',
-    required: ['serviceVariationId', 'teamMemberId', 'startAt'],
+    required: ['booking'],
     properties: {
-      serviceVariationId: { type: 'string', description: 'The ID of the service variation to book' },
-      teamMemberId: { type: 'string', description: 'The ID of the team member to book with' },
-      startAt: { 
-        type: 'string',
-        format: 'date-time',
-        description: 'The appointment start time (ISO 8601 date-time)'
-      },
-      customerNote: { 
-        type: 'string',
-        maxLength: 500,
-        description: 'Optional note from the customer about the appointment'
+      booking: {
+        type: 'object',
+        required: ['customer_id', 'appointment_segments', 'location_id', 'start_at'],
+        properties: {
+          customer_id: { type: 'string', description: 'Customer ID from Square' },
+          appointment_segments: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['duration_minutes', 'service_variation_id', 'team_member_id'],
+              properties: {
+                duration_minutes: { type: 'number' },
+                service_variation_id: { type: 'string' },
+                service_variation_version: { type: 'number' },
+                team_member_id: { type: 'string' }
+              }
+            }
+          },
+          customer_note: { type: 'string', maxLength: 500 },
+          location_id: { type: ['string', 'null'] },
+          start_at: { 
+            type: ['string', 'null'],
+            format: 'date-time'
+          }
+        }
       }
     }
   },

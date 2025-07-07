@@ -229,14 +229,14 @@ async function createBooking(request, reply) {
   const squareService = new SquareService();
 
   try {
-    // Add customer ID from authenticated user
-    const bookingData = {
-      ...request.body,
-      customerId: request.user.id // Use the user's ID (which should be Square customer ID for customers)
-    };
-
-    const booking = await squareService.createBooking(bookingData);
-    return reply.code(200).send(booking);
+    // Pass the booking request as-is to the service
+    // The frontend already sends the correct format
+    const bookingResponse = await squareService.createBooking(request.body);
+    
+    // Return the booking response wrapped in the expected format
+    return reply.code(200).send({
+      booking: bookingResponse
+    });
   } catch (error) {
     request.log.error(error);
 

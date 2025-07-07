@@ -196,49 +196,41 @@ export default class SquareService {
 
   /**
    * Create a booking
-   * @param {Object} bookingData - Booking details
+   * @param {Object} bookingRequest - Booking request in Square format
    * @returns {Promise<Object>} Created booking
    */
-  async createBooking(bookingData) {
+  async createBooking(bookingRequest) {
     try {
-      const { customerId, serviceVariationId, teamMemberId, startAt, customerNote } = bookingData;
-
-      // Get service details to determine duration
-      const serviceDetails = await this._getServiceVariationDetails(serviceVariationId);
+      // Extract the booking object from the request
+      const { booking } = bookingRequest;
       
+      // Add required fields if not present
       const requestBody = {
         booking: {
-          customer_id: customerId,
-          start_at: startAt,
-          location_id: this.locationId,
+          ...booking,
           location_type: 'BUSINESS_LOCATION',
-          appointment_segments: [{
-            duration_minutes: Math.floor(serviceDetails.durationMinutes || 30),
-            service_variation_id: serviceVariationId,
-            team_member_id: teamMemberId,
-            service_variation_version: serviceDetails.version || 1
-          }],
-          customer_note: customerNote || '',
-          seller_note: ''
+          seller_note: booking.seller_note || ''
         }
       };
 
-      console.log('Creating booking with:', requestBody);
+      console.log('Creating booking with:', JSON.stringify(requestBody, null, 2));
       const response = await this.client.post('/bookings', requestBody);
       
-      const booking = response.data.booking;
+      const createdBooking = response.data.booking;
       
       return {
-        id: booking.id,
-        version: booking.version,
-        status: booking.status,
-        createdAt: booking.created_at,
-        updatedAt: booking.updated_at,
-        startAt: booking.start_at,
-        locationId: booking.location_id,
-        customerId: booking.customer_id,
-        customerNote: booking.customer_note,
-        appointmentSegments: booking.appointment_segments
+        id: createdBooking.id,
+        version: createdBooking.version,
+        status: createdBooking.status,
+        created_at: createdBooking.created_at,
+        updated_at: createdBooking.updated_at,
+        location_id: createdBooking.location_id,
+        customer_id: createdBooking.customer_id,
+        customer_note: createdBooking.customer_note,
+        start_at: createdBooking.start_at,
+        all_day: createdBooking.all_day || false,
+        appointment_segments: createdBooking.appointment_segments,
+        source: createdBooking.source || 'API'
       };
     } catch (error) {
       console.error('Square createBooking error:', error.response?.data || error.message);
