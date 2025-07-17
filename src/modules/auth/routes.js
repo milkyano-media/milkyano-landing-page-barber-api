@@ -8,7 +8,9 @@ import {
   verifyOTP,
   refreshToken,
   getMe,
-  updatePassword
+  updatePassword,
+  verifyGoogleOAuth,
+  completeGoogleOAuth
 } from './handlers.js';
 
 import {
@@ -20,7 +22,9 @@ import {
   verifyOTPSchema,
   refreshTokenSchema,
   getMeSchema,
-  updatePasswordSchema
+  updatePasswordSchema,
+  verifyGoogleOAuthSchema,
+  completeGoogleOAuthSchema
 } from './schemas/index.js';
 
 export default async function authRoutes(fastify, opts) {
@@ -93,6 +97,17 @@ export default async function authRoutes(fastify, opts) {
   fastify.post('/refresh', {
     schema: refreshTokenSchema,
     handler: refreshToken
+  });
+
+  // OAuth endpoints
+  fastify.post('/google/verify', {
+    schema: verifyGoogleOAuthSchema,
+    handler: verifyGoogleOAuth
+  });
+
+  fastify.post('/google/complete', {
+    schema: completeGoogleOAuthSchema,
+    handler: completeGoogleOAuth
   });
 
   // Protected routes - authentication required

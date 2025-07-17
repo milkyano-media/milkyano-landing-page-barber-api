@@ -2,6 +2,7 @@
 import bcrypt from "bcrypt";
 import { getSquareClient } from "../square/utils/client.js";
 import twilioService from "./utils/twilio.js";
+import oauthService from "./utils/oauth.js";
 import { AppError } from "../../utils/errors.js";
 
 const SALT_ROUNDS = 10;
@@ -405,6 +406,141 @@ export default class AuthService {
       where: { id: userId },
       data: { password: hashedPassword }
     });
+  }
+
+  /**
+   * Verify Google OAuth token and get profile
+   * @param {string} idToken - Google ID token
+   * @returns {Promise<Object>} Google profile or existing user
+   */
+  async verifyGoogleOAuth(idToken) {
+    // Verify Google token and get user profile
+    const googleProfile = await oauthService.verifyGoogleToken(idToken);
+    
+    // Check if OAuth account already exists
+    const existingOAuth = await this.prisma.oAuthAccount.findUnique({
+      where: {
+        provider_providerId: {
+          provider: 'GOOGLE',
+          providerId: googleProfile.providerId
+        }
+      },
+      include: {
+        user: true
+      }
+    });
+
+    if (existingOAuth) {
+      // User already exists, return the user for login
+      return {
+        type: 'existing_user',
+        user: existingOAuth.user
+      };
+    }
+
+    // Check if user exists with this email
+    if (googleProfile.email) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: googleProfile.email }
+      });
+
+      if (existingUser) {
+        // Link existing user to Google OAuth
+        await this.prisma.oAuthAccount.create({
+          data: {
+            userId: existingUser.id,
+            provider: 'GOOGLE',
+            providerId: googleProfile.providerId,
+            providerEmail: googleProfile.email
+          }
+        });
+
+        return {
+          type: 'existing_user',
+          user: existingUser
+        };
+      }
+    }
+
+    // New user - return profile for phone number collection
+    return {
+      type: 'new_user',
+      profile: googleProfile
+    };
+  }
+
+  /**
+   * Complete Google OAuth registration with phone number
+   * @param {string} idToken - Google ID token
+   * @param {string} phoneNumber - User's phone number
+   * @returns {Promise<Object>} User data
+   */
+  async completeGoogleOAuth(idToken, phoneNumber) {
+    // Verify Google token again
+    const googleProfile = await oauthService.verifyGoogleToken(idToken);
+    
+    // Format phone number
+    const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
+
+    // Check if phone number is already taken
+    const existingPhoneUser = await this.prisma.user.findUnique({
+      where: { phoneNumber: formattedPhone }
+    });
+
+    if (existingPhoneUser) {
+      throw new AppError(400, "Phone number already registered");
+    }
+
+    // Create new user with Google OAuth and phone number
+    const user = await this.prisma.user.create({
+      data: {
+        email: googleProfile.email,
+        firstName: googleProfile.firstName || 'User',
+        lastName: googleProfile.lastName || '',
+        phoneNumber: formattedPhone,
+        role: 'CUSTOMER',
+        isVerified: false // Will be verified via OTP
+      }
+    });
+
+    // Create OAuth account record
+    await this.prisma.oAuthAccount.create({
+      data: {
+        userId: user.id,
+        provider: 'GOOGLE',
+        providerId: googleProfile.providerId,
+        providerEmail: googleProfile.email
+      }
+    });
+
+    // Create Square customer
+    try {
+      const idempotencyKey = `oauth-google-${user.id}-${Date.now()}`;
+      
+      const response = await this.squareClient.post('/customers', {
+        idempotency_key: idempotencyKey,
+        given_name: user.firstName,
+        family_name: user.lastName,
+        email_address: user.email,
+        phone_number: formattedPhone
+      });
+
+      // Update user with Square ID
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          squareupId: response.data.customer.id
+        }
+      });
+    } catch (error) {
+      console.error('Square customer creation error:', error);
+      // Continue even if Square creation fails
+    }
+
+    // Send OTP for phone verification
+    await twilioService.sendOTP(phoneNumber);
+
+    return user;
   }
 
 }

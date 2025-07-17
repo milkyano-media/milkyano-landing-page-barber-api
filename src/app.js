@@ -84,7 +84,13 @@ export default function build(opts = {}) {
     origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Referrer-Policy']
+  });
+
+  // Add Referrer-Policy header for localhost testing
+  app.addHook('onRequest', async (request, reply) => {
+    reply.header('Referrer-Policy', 'no-referrer-when-downgrade');
   });
 
   // Register plugins

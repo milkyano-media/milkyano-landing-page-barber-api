@@ -35,3 +35,9 @@ Thumbs.db
 
 # Temporary files
 /tmp
+
+# Dev Junk
+.claude
+redis
+redis-7.2.4-windows.zip
+redis-windows.zip
