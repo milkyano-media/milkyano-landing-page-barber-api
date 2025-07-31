@@ -10,7 +10,9 @@ import {
   getMe,
   updatePassword,
   verifyGoogleOAuth,
-  completeGoogleOAuth
+  completeGoogleOAuth,
+  verifyAppleOAuth,
+  completeAppleOAuth
 } from './handlers.js';
 
 import {
@@ -24,7 +26,9 @@ import {
   getMeSchema,
   updatePasswordSchema,
   verifyGoogleOAuthSchema,
-  completeGoogleOAuthSchema
+  completeGoogleOAuthSchema,
+  verifyAppleOAuthSchema,
+  completeAppleOAuthSchema
 } from './schemas/index.js';
 
 export default async function authRoutes(fastify, opts) {
@@ -108,6 +112,17 @@ export default async function authRoutes(fastify, opts) {
   fastify.post('/google/complete', {
     schema: completeGoogleOAuthSchema,
     handler: completeGoogleOAuth
+  });
+
+  // Apple OAuth endpoints
+  fastify.post('/apple/verify', {
+    schema: verifyAppleOAuthSchema,
+    handler: verifyAppleOAuth
+  });
+
+  fastify.post('/apple/complete', {
+    schema: completeAppleOAuthSchema,
+    handler: completeAppleOAuth
   });
 
   // Protected routes - authentication required

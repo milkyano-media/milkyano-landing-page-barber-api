@@ -641,3 +641,149 @@ export const completeGoogleOAuthSchema = {
     }
   }
 };
+
+export const verifyAppleOAuthSchema = {
+  tags: ['auth'],
+  summary: 'Verify Apple OAuth token',
+  description: 'Verify Apple ID token and check if user exists or needs registration',
+  body: {
+    type: 'object',
+    required: ['idToken'],
+    properties: {
+      idToken: {
+        type: 'string',
+        minLength: 1,
+        description: 'Apple ID token from OAuth flow'
+      },
+      authorizationCode: {
+        type: 'string',
+        description: 'Apple authorization code (optional)'
+      }
+    }
+  },
+  response: {
+    200: {
+      description: 'Apple OAuth verification successful',
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['existing_user', 'new_user'] },
+        accessToken: { type: 'string', description: 'JWT access token (for existing users)' },
+        refreshToken: { type: 'string', description: 'JWT refresh token (for existing users)' },
+        tokenType: { type: 'string', description: 'Token type (Bearer)' },
+        expiresIn: { type: 'number', description: 'Access token expiry in seconds' },
+        user: {
+          type: 'object',
+          description: 'User information (for existing users)',
+          properties: {
+            id: { type: 'string' },
+            phoneNumber: { type: ['string', 'null'] },
+            email: { type: ['string', 'null'] },
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            role: { type: 'string', enum: ['CUSTOMER', 'ADMIN'] },
+            isVerified: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        profile: {
+          type: 'object',
+          description: 'Apple profile (for new users)',
+          properties: {
+            email: { type: 'string' },
+            firstName: { type: 'string' },
+            lastName: { type: 'string' }
+          }
+        },
+        tempToken: { type: 'string', description: 'Temporary token for completing registration' }
+      }
+    },
+    401: {
+      description: 'Invalid Apple token',
+      type: 'object',
+      properties: {
+        error: { type: 'string' }
+      }
+    },
+    500: {
+      description: 'Internal server error',
+      type: 'object',
+      properties: {
+        error: { type: 'string' }
+      }
+    }
+  }
+};
+
+export const completeAppleOAuthSchema = {
+  tags: ['auth'],
+  summary: 'Complete Apple OAuth registration',
+  description: 'Complete Apple OAuth registration by providing phone number',
+  body: {
+    type: 'object',
+    required: ['idToken', 'phoneNumber'],
+    properties: {
+      idToken: {
+        type: 'string',
+        minLength: 1,
+        description: 'Apple ID token from OAuth flow'
+      },
+      phoneNumber: {
+        type: 'string',
+        pattern: '^[0-9+\\-() ]+$',
+        minLength: 10,
+        maxLength: 20,
+        description: 'Phone number for account verification'
+      }
+    }
+  },
+  response: {
+    201: {
+      description: 'Apple OAuth registration completed successfully',
+      type: 'object',
+      properties: {
+        accessToken: { type: 'string', description: 'JWT access token (expires in 1 day)' },
+        refreshToken: { type: 'string', description: 'JWT refresh token (expires in 90 days)' },
+        tokenType: { type: 'string', description: 'Token type (Bearer)' },
+        expiresIn: { type: 'number', description: 'Access token expiry in seconds' },
+        user: {
+          type: 'object',
+          description: 'User information',
+          properties: {
+            id: { type: 'string' },
+            phoneNumber: { type: 'string' },
+            email: { type: ['string', 'null'] },
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            role: { type: 'string', enum: ['CUSTOMER', 'ADMIN'] },
+            isVerified: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        message: { type: 'string', description: 'Success message' }
+      }
+    },
+    400: {
+      description: 'Invalid input or phone number already registered',
+      type: 'object',
+      properties: {
+        error: { type: 'string' }
+      }
+    },
+    401: {
+      description: 'Invalid Apple token',
+      type: 'object',
+      properties: {
+        error: { type: 'string' }
+      }
+    },
+    500: {
+      description: 'Internal server error',
+      type: 'object',
+      properties: {
+        error: { type: 'string' }
+      }
+    }
+  }
+};

@@ -543,4 +543,140 @@ export default class AuthService {
     return user;
   }
 
+  /**
+   * Verify Apple OAuth token and check user status
+   * @param {string} idToken - Apple ID token
+   * @param {string} authorizationCode - Apple authorization code (optional)
+   * @returns {Promise<Object>} User or profile data
+   */
+  async verifyAppleOAuth(idToken, authorizationCode = null) {
+    // Verify Apple token and get user profile
+    const appleProfile = await oauthService.verifyAppleIdToken(idToken);
+    
+    // Check if OAuth account already exists
+    const existingOAuth = await this.prisma.oAuthAccount.findUnique({
+      where: {
+        provider_providerId: {
+          provider: 'APPLE',
+          providerId: appleProfile.providerId
+        }
+      },
+      include: {
+        user: true
+      }
+    });
+
+    if (existingOAuth) {
+      // User already exists, return the user for login
+      return {
+        type: 'existing_user',
+        user: existingOAuth.user
+      };
+    }
+
+    // Check if user exists with this email
+    if (appleProfile.email) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: appleProfile.email }
+      });
+
+      if (existingUser) {
+        // Link existing user to Apple OAuth
+        await this.prisma.oAuthAccount.create({
+          data: {
+            userId: existingUser.id,
+            provider: 'APPLE',
+            providerId: appleProfile.providerId,
+            providerEmail: appleProfile.email
+          }
+        });
+
+        return {
+          type: 'existing_user',
+          user: existingUser
+        };
+      }
+    }
+
+    // New user - return profile for phone number collection
+    return {
+      type: 'new_user',
+      profile: appleProfile
+    };
+  }
+
+  /**
+   * Complete Apple OAuth registration with phone number
+   * @param {string} idToken - Apple ID token
+   * @param {string} phoneNumber - User's phone number
+   * @returns {Promise<Object>} User data
+   */
+  async completeAppleOAuth(idToken, phoneNumber) {
+    // Verify Apple token again
+    const appleProfile = await oauthService.verifyAppleIdToken(idToken);
+    
+    // Format phone number
+    const formattedPhone = twilioService.formatPhoneNumber(phoneNumber);
+
+    // Check if phone number is already taken
+    const existingPhoneUser = await this.prisma.user.findUnique({
+      where: { phoneNumber: formattedPhone }
+    });
+
+    if (existingPhoneUser) {
+      throw new AppError(400, "Phone number already registered");
+    }
+
+    // Create new user with Apple OAuth and phone number
+    const user = await this.prisma.user.create({
+      data: {
+        email: appleProfile.email,
+        firstName: appleProfile.firstName || 'Apple',
+        lastName: appleProfile.lastName || 'User',
+        phoneNumber: formattedPhone,
+        role: 'CUSTOMER',
+        isVerified: false // Will be verified via OTP
+      }
+    });
+
+    // Create OAuth account record
+    await this.prisma.oAuthAccount.create({
+      data: {
+        userId: user.id,
+        provider: 'APPLE',
+        providerId: appleProfile.providerId,
+        providerEmail: appleProfile.email
+      }
+    });
+
+    // Create Square customer
+    try {
+      const idempotencyKey = `oauth-apple-${user.id}-${Date.now()}`;
+      
+      const response = await this.squareClient.post('/customers', {
+        idempotency_key: idempotencyKey,
+        given_name: user.firstName,
+        family_name: user.lastName,
+        email_address: user.email,
+        phone_number: formattedPhone
+      });
+
+      // Update user with Square ID
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          squareupId: response.data.customer.id
+        }
+      });
+    } catch (error) {
+      console.error('Square customer creation error:', error);
+      // Continue even if Square creation fails
+    }
+
+    // Send OTP for phone verification
+    await twilioService.sendOTP(phoneNumber);
+
+    return user;
+  }
+
 }

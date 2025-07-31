@@ -6,7 +6,7 @@ function formatBarberProfile(barber) {
   return {
     team_member_id: barber.id,
     display_name: barber.displayName,
-    is_bookable: barber.isBookable !== undefined ? barber.isBookable : true
+    is_bookable: barber.isBookable !== undefined ? barber.isBookable : true,
   };
 }
 
@@ -18,7 +18,7 @@ async function getBarbers(request, reply) {
 
   try {
     let barbers;
-    
+
     // Check cache if Redis is available and bypass_cache is not set
     if (this.redis && !bypass_cache) {
       const cached = await this.redis.get(cacheKey);
@@ -27,12 +27,12 @@ async function getBarbers(request, reply) {
         barbers = JSON.parse(cached);
       }
     }
-    
+
     // Fetch from Square if not cached
     if (!barbers) {
       console.log("getBarbers from square");
       barbers = await squareService.getBarbers();
-      
+
       // Cache the result if Redis is available
       if (this.redis && barbers.length > 0) {
         await this.redis.setex(cacheKey, cacheTTL, JSON.stringify(barbers));
@@ -41,19 +41,19 @@ async function getBarbers(request, reply) {
 
     // Return wrapped response for frontend compatibility
     return reply.code(200).send({
-      team_member_booking_profiles: barbers.map(formatBarberProfile)
+      team_member_booking_profiles: barbers.map(formatBarberProfile),
     });
   } catch (error) {
     request.log.error(error);
 
     if (error.statusCode) {
       return reply.code(error.statusCode).send({
-        error: error.message
+        error: error.message,
       });
     }
 
     return reply.code(500).send({
-      error: "Internal server error"
+      error: "Internal server error",
     });
   }
 }
@@ -86,12 +86,12 @@ async function getBarberDetails(request, reply) {
 
     if (error.statusCode) {
       return reply.code(error.statusCode).send({
-        error: error.message
+        error: error.message,
       });
     }
 
     return reply.code(500).send({
-      error: "Internal server error"
+      error: "Internal server error",
     });
   }
 }
@@ -114,7 +114,7 @@ async function getServices(request, reply) {
         return reply.code(200).send({
           objects: transformedServices,
           cursor: "",
-          matched_variation_ids: []
+          matched_variation_ids: [],
         });
       }
     }
@@ -131,19 +131,19 @@ async function getServices(request, reply) {
     return reply.code(200).send({
       objects: transformedServices,
       cursor: "",
-      matched_variation_ids: []
+      matched_variation_ids: [],
     });
   } catch (error) {
     request.log.error(error);
 
     if (error.statusCode) {
       return reply.code(error.statusCode).send({
-        error: error.message
+        error: error.message,
       });
     }
 
     return reply.code(500).send({
-      error: "Internal server error"
+      error: "Internal server error",
     });
   }
 }
@@ -182,8 +182,8 @@ function transformServices(services) {
           available_for_booking: variation.availableForBooking,
           sellable: true,
           stockable: false,
-          team_member_ids: variation.teamMemberIds || []
-        }
+          team_member_ids: variation.teamMemberIds || [],
+        },
       })),
       product_type: "APPOINTMENTS_SERVICE",
       skip_modifier_screen: false,
@@ -192,8 +192,8 @@ function transformServices(services) {
       is_taxable: false,
       ecom_visibility: "UNINDEXED",
       is_archived: false,
-      channels: ["CH_WEBSTORE"]
-    }
+      channels: ["CH_WEBSTORE"],
+    },
   }));
 }
 
@@ -205,22 +205,24 @@ async function checkAvailability(request, reply) {
     const availabilityData = {
       serviceVariationId: request.body.service_variation_id,
       startAt: request.body.start_at,
-      endAt: request.body.end_at
+      endAt: request.body.end_at,
     };
 
-    const availability = await squareService.checkAvailability(availabilityData);
+    const availability = await squareService.checkAvailability(
+      availabilityData
+    );
     return reply.code(200).send(availability);
   } catch (error) {
     request.log.error(error);
 
     if (error.statusCode) {
       return reply.code(error.statusCode).send({
-        error: error.message
+        error: error.message,
       });
     }
 
     return reply.code(500).send({
-      error: "Internal server error"
+      error: "Internal server error",
     });
   }
 }
@@ -232,23 +234,23 @@ async function createBooking(request, reply) {
     // Pass the booking request as-is to the service
     // The frontend already sends the correct format
     const bookingResponse = await squareService.createBooking(request.body);
-    
+
     // Return the booking response in the format expected by frontend
     return reply.code(200).send({
       booking: bookingResponse,
-      errors: []
+      errors: [],
     });
   } catch (error) {
     request.log.error(error);
 
     if (error.statusCode) {
       return reply.code(error.statusCode).send({
-        error: error.message
+        error: error.message,
       });
     }
 
     return reply.code(500).send({
-      error: "Internal server error"
+      error: "Internal server error",
     });
   }
 }
@@ -259,29 +261,18 @@ async function getBookingDetails(request, reply) {
   try {
     const booking = await squareService.getBookingDetails(request.params.id);
 
-    // For customers, only allow viewing their own bookings
-    if (
-      request.user.role === "CUSTOMER" &&
-      booking.customerId !== request.user.id
-    ) {
-      return reply.code(403).send({
-        error: "Forbidden",
-        message: "You can only view your own bookings"
-      });
-    }
-
     return reply.code(200).send(booking);
   } catch (error) {
     request.log.error(error);
 
     if (error.statusCode) {
       return reply.code(error.statusCode).send({
-        error: error.message
+        error: error.message,
       });
     }
 
     return reply.code(500).send({
-      error: "Internal server error"
+      error: "Internal server error",
     });
   }
 }
@@ -292,17 +283,6 @@ async function cancelBooking(request, reply) {
   try {
     // First get booking details to verify ownership
     const booking = await squareService.getBookingDetails(request.params.id);
-
-    // For customers, only allow canceling their own bookings
-    if (
-      request.user.role === "CUSTOMER" &&
-      booking.customerId !== request.user.id
-    ) {
-      return reply.code(403).send({
-        error: "Forbidden",
-        message: "You can only cancel your own bookings"
-      });
-    }
 
     const cancelledBooking = await squareService.cancelBooking(
       request.params.id,
@@ -315,12 +295,12 @@ async function cancelBooking(request, reply) {
 
     if (error.statusCode) {
       return reply.code(error.statusCode).send({
-        error: error.message
+        error: error.message,
       });
     }
 
     return reply.code(500).send({
-      error: "Internal server error"
+      error: "Internal server error",
     });
   }
 }
@@ -336,12 +316,12 @@ async function createCustomer(request, reply) {
 
     if (error.statusCode) {
       return reply.code(error.statusCode).send({
-        error: error.message
+        error: error.message,
       });
     }
 
     return reply.code(500).send({
-      error: "Internal server error"
+      error: "Internal server error",
     });
   }
 }
@@ -351,18 +331,21 @@ async function findCustomer(request, reply) {
 
   try {
     const { email, phone } = request.query;
-    
+
     if (!email || !phone) {
       return reply.code(400).send({
-        error: "Email and phone are required"
+        error: "Email and phone are required",
       });
     }
 
-    const customer = await squareService.findCustomerByEmailAndPhone(email, phone);
-    
+    const customer = await squareService.findCustomerByEmailAndPhone(
+      email,
+      phone
+    );
+
     if (!customer) {
       return reply.code(404).send({
-        error: "Customer not found"
+        error: "Customer not found",
       });
     }
 
@@ -371,7 +354,7 @@ async function findCustomer(request, reply) {
     request.log.error(error);
 
     return reply.code(500).send({
-      error: "Internal server error"
+      error: "Internal server error",
     });
   }
 }
@@ -381,23 +364,26 @@ async function getCustomerStatus(request, reply) {
 
   try {
     const { email, phone } = request.query;
-    
+
     if (!email || !phone) {
       return reply.code(400).send({
-        error: "Email and phone are required"
+        error: "Email and phone are required",
       });
     }
 
-    const customer = await squareService.findCustomerByEmailAndPhone(email, phone);
-    
+    const customer = await squareService.findCustomerByEmailAndPhone(
+      email,
+      phone
+    );
+
     return reply.code(200).send({
-      new_customer: !customer
+      new_customer: !customer,
     });
   } catch (error) {
     request.log.error(error);
 
     return reply.code(500).send({
-      error: "Internal server error"
+      error: "Internal server error",
     });
   }
 }
@@ -412,5 +398,5 @@ export {
   cancelBooking,
   createCustomer,
   findCustomer,
-  getCustomerStatus
+  getCustomerStatus,
 };

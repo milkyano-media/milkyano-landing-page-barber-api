@@ -386,6 +386,104 @@ async function completeGoogleOAuth(request, reply) {
   }
 }
 
+async function verifyAppleOAuth(request, reply) {
+  const authService = new AuthService(this.prisma);
+  
+  try {
+    const { idToken, authorizationCode } = request.body;
+    
+    // Verify Apple token and check user status
+    const result = await authService.verifyAppleOAuth(idToken, authorizationCode);
+    
+    if (result.type === 'existing_user') {
+      // User exists, generate tokens and log them in
+      const tokens = await this.generateTokens(result.user);
+      
+      return reply.code(200).send({
+        type: 'existing_user',
+        ...tokens,
+        user: {
+          id: result.user.id,
+          phoneNumber: result.user.phoneNumber,
+          email: result.user.email,
+          firstName: result.user.firstName,
+          lastName: result.user.lastName,
+          role: result.user.role,
+          isVerified: result.user.isVerified,
+          createdAt: result.user.createdAt,
+          updatedAt: result.user.updatedAt
+        }
+      });
+    } else {
+      // New user, return profile for phone number collection
+      return reply.code(200).send({
+        type: 'new_user',
+        profile: {
+          email: result.profile.email,
+          firstName: result.profile.firstName,
+          lastName: result.profile.lastName
+        },
+        // Store the idToken temporarily for the next step
+        tempToken: idToken
+      });
+    }
+  } catch (error) {
+    request.log.error(error);
+    
+    if (error.statusCode) {
+      return reply.code(error.statusCode).send({ 
+        error: error.message 
+      });
+    }
+    
+    return reply.code(500).send({ 
+      error: 'Internal server error' 
+    });
+  }
+}
+
+async function completeAppleOAuth(request, reply) {
+  const authService = new AuthService(this.prisma);
+  
+  try {
+    const { idToken, phoneNumber } = request.body;
+    
+    // Complete Apple OAuth registration with phone number
+    const user = await authService.completeAppleOAuth(idToken, phoneNumber);
+    
+    // Generate tokens
+    const tokens = await this.generateTokens(user);
+    
+    return reply.code(201).send({
+      ...tokens,
+      user: {
+        id: user.id,
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      },
+      message: 'Registration successful. OTP sent for phone verification.'
+    });
+  } catch (error) {
+    request.log.error(error);
+    
+    if (error.statusCode) {
+      return reply.code(error.statusCode).send({ 
+        error: error.message 
+      });
+    }
+    
+    return reply.code(500).send({ 
+      error: 'Internal server error' 
+    });
+  }
+}
+
 export {
   register,
   registerAdmin,
@@ -397,5 +495,7 @@ export {
   getMe,
   updatePassword,
   verifyGoogleOAuth,
-  completeGoogleOAuth
+  completeGoogleOAuth,
+  verifyAppleOAuth,
+  completeAppleOAuth
 };
