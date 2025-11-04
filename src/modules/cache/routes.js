@@ -14,17 +14,17 @@ import {
 } from './schemas/index.js';
 
 export default async function cacheRoutes(fastify, opts) {
-  // All cache management routes require admin authentication
-  fastify.addHook('preHandler', async (request, reply) => {
-    await fastify.authenticate(request, reply);
-    
-    // Only ADMIN role can manage cache
-    // if (request.user.role !== 'ADMIN') {
-    //   reply.code(403).send({ 
-    //     error: 'Access denied. Admin role required.' 
-    //   });
-    // }
-  });
+  // Authentication disabled for cache management - can be called freely
+  // fastify.addHook('preHandler', async (request, reply) => {
+  //   await fastify.authenticate(request, reply);
+  //
+  //   // Only ADMIN role can manage cache
+  //   // if (request.user.role !== 'ADMIN') {
+  //   //   reply.code(403).send({
+  //   //     error: 'Access denied. Admin role required.'
+  //   //   });
+  //   // }
+  // });
 
   // Clear all cache
   fastify.delete('/all', {
