@@ -18,6 +18,7 @@ import authRoutes from './modules/auth/routes.js';
 import squareRoutes from './modules/square/routes.js';
 import customerRoutes from './modules/customers/routes.js';
 import cacheRoutes from './modules/cache/routes.js';
+import parameterRoutes from './modules/parameters/routes.js';
 
 // Logger configuration
 function createLoggerConfig() {
@@ -120,7 +121,8 @@ export default function build(opts = {}) {
         { name: 'auth', description: 'Authentication endpoints' },
         { name: 'square', description: 'Square API integration' },
         { name: 'customers', description: 'Customer management' },
-        { name: 'cache', description: 'Cache management (Admin only)' }
+        { name: 'cache', description: 'Cache management (Admin only)' },
+        { name: 'parameters', description: 'Parameter system management (Admin only)' }
       ]
     }
   });
@@ -136,7 +138,8 @@ export default function build(opts = {}) {
     apiInstance.register(squareRoutes);
     apiInstance.register(customerRoutes, { prefix: '/customers' });
     apiInstance.register(cacheRoutes, { prefix: '/cache' });
-    
+    apiInstance.register(parameterRoutes, { prefix: '/parameters' });
+
     done();
   }, { prefix: '/api/v1' });
 

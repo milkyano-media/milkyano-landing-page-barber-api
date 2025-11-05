@@ -18,6 +18,28 @@ enum OAuthProvider {
   FACEBOOK
 }
 
+enum ParameterType {
+  STRING
+  NUMBER
+  BOOLEAN
+  COLOR
+  JSON
+  IMAGE_URL
+  URL
+}
+
+enum ParameterCategory {
+  THEME
+  BRANDING
+  LAYOUT
+  CONTENT
+  FEATURE_FLAG
+  SEO
+  ANALYTICS
+  CONTACT
+  BOOKING
+}
+
 model User {
   id                String    @id @default(uuid())
   squareupId        String?   @unique // Square customer ID
@@ -60,4 +82,21 @@ model OAuthAccount {
   @@index([userId])
   @@index([provider])
   @@map("oauth_accounts")
+}
+
+model Parameter {
+  id          String            @id @default(uuid())
+  key         String            @unique
+  value       Json              // Flexible storage for any value type
+  type        ParameterType
+  category    ParameterCategory
+  description String?
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+  @@index([key])
+  @@map("parameters")
 }
