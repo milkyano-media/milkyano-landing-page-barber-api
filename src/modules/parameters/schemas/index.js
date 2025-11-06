@@ -24,7 +24,6 @@ export const listParametersSchema = {
     properties: {
       category: {
         type: 'string',
-        enum: ['THEME', 'BRANDING', 'LAYOUT', 'CONTENT', 'FEATURE_FLAG', 'SEO', 'ANALYTICS', 'CONTACT', 'BOOKING'],
         description: 'Filter by category'
       },
       type: {
@@ -261,16 +260,6 @@ export const updateParameterByIdSchema = {
     properties: {
       value: {
         description: 'Parameter value (can be string, number, boolean, object, etc.)'
-      },
-      type: {
-        type: 'string',
-        enum: ['STRING', 'NUMBER', 'BOOLEAN', 'COLOR', 'JSON', 'IMAGE_URL', 'URL'],
-        description: 'Parameter type'
-      },
-      category: {
-        type: 'string',
-        enum: ['THEME', 'BRANDING', 'LAYOUT', 'CONTENT', 'FEATURE_FLAG', 'SEO', 'ANALYTICS', 'CONTACT', 'BOOKING'],
-        description: 'Parameter category'
       },
       description: {
         type: 'string',
