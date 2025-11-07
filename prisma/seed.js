@@ -181,10 +181,153 @@ async function main() {
         description: 'Brand primary color (that distinctive green)',
         isActive: true
       }
+    }),
+    // Phase 2: Additional Theme Colors
+    prisma.parameter.create({
+      data: {
+        key: 'theme.secondary_color',
+        value: '#ffffff',
+        type: 'COLOR',
+        category: 'THEME',
+        description: 'Secondary accent color',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'theme.background_color',
+        value: '#000000',
+        type: 'COLOR',
+        category: 'THEME',
+        description: 'Main background color',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'theme.card_background_color',
+        value: '#0a0a0a',
+        type: 'COLOR',
+        category: 'THEME',
+        description: 'Card and panel background color',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'theme.border_color',
+        value: '#292524',
+        type: 'COLOR',
+        category: 'THEME',
+        description: 'Border color (stone-800)',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'theme.text_color_primary',
+        value: '#ffffff',
+        type: 'COLOR',
+        category: 'THEME',
+        description: 'Primary text color',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'theme.text_color_secondary',
+        value: '#a8a29e',
+        type: 'COLOR',
+        category: 'THEME',
+        description: 'Secondary text color (gray-400)',
+        isActive: true
+      }
+    }),
+    // Phase 2: Additional Content Parameters
+    prisma.parameter.create({
+      data: {
+        key: 'content.booking_success_title',
+        value: 'Thanks For Booking',
+        type: 'STRING',
+        category: 'CONTENT',
+        description: 'Booking confirmation page title',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'content.booking_success_message',
+        value: 'Your Appointment is Coming Up',
+        type: 'STRING',
+        category: 'CONTENT',
+        description: 'Booking confirmation page message',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'content.about_us_headline',
+        value: 'About Fadedlines',
+        type: 'STRING',
+        category: 'CONTENT',
+        description: 'About page main headline',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'content.footer_tagline',
+        value: 'Your style, our passion',
+        type: 'STRING',
+        category: 'CONTENT',
+        description: 'Footer tagline/slogan',
+        isActive: true
+      }
+    }),
+    // Phase 2: Branding Parameters
+    prisma.parameter.create({
+      data: {
+        key: 'branding.company_name',
+        value: 'Milkyano Barber',
+        type: 'STRING',
+        category: 'BRANDING',
+        description: 'Company name',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'branding.company_tagline',
+        value: 'Premium Barbershop Experience',
+        type: 'STRING',
+        category: 'BRANDING',
+        description: 'Main company tagline',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'branding.logo_url',
+        value: '',
+        type: 'BASE64',
+        category: 'BRANDING',
+        description: 'Main logo (base64 encoded image)',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'branding.logo_url_dark',
+        value: '',
+        type: 'BASE64',
+        category: 'BRANDING',
+        description: 'Dark mode logo (base64 encoded image)',
+        isActive: true
+      }
     })
   ]);
 
-  console.log(`Created ${parameters.length} Phase 1 parameters`);
+  console.log(`Created ${parameters.length} parameters (Phase 1 + Phase 2)`);
 
   console.log('Database seeding completed!');
   console.log('\nNote: These are sample users. In production, users will be created via OTP verification.');

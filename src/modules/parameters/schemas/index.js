@@ -5,7 +5,7 @@ const parameterResponseProperties = {
   id: { type: 'string' },
   key: { type: 'string' },
   value: { description: 'Parameter value (can be any JSON type)' },
-  type: { type: 'string', enum: ['STRING', 'NUMBER', 'BOOLEAN', 'COLOR', 'JSON', 'IMAGE_URL', 'URL'] },
+  type: { type: 'string', enum: ['STRING', 'NUMBER', 'BOOLEAN', 'COLOR', 'JSON', 'BASE64', 'URL'] },
   category: { type: 'string', enum: ['THEME', 'BRANDING', 'LAYOUT', 'CONTENT', 'FEATURE_FLAG', 'SEO', 'ANALYTICS', 'CONTACT', 'BOOKING'] },
   description: { type: ['string', 'null'] },
   isActive: { type: 'boolean' },
@@ -28,7 +28,7 @@ export const listParametersSchema = {
       },
       type: {
         type: 'string',
-        enum: ['STRING', 'NUMBER', 'BOOLEAN', 'COLOR', 'JSON', 'IMAGE_URL', 'URL'],
+        enum: ['STRING', 'NUMBER', 'BOOLEAN', 'COLOR', 'JSON', 'BASE64', 'URL'],
         description: 'Filter by type'
       },
       is_active: {
@@ -203,7 +203,7 @@ export const createParameterSchema = {
       },
       type: {
         type: 'string',
-        enum: ['STRING', 'NUMBER', 'BOOLEAN', 'COLOR', 'JSON', 'IMAGE_URL', 'URL'],
+        enum: ['STRING', 'NUMBER', 'BOOLEAN', 'COLOR', 'JSON', 'BASE64', 'URL'],
         description: 'Parameter type'
       },
       category: {
@@ -312,7 +312,7 @@ export const updateParameterByKeySchema = {
       },
       type: {
         type: 'string',
-        enum: ['STRING', 'NUMBER', 'BOOLEAN', 'COLOR', 'JSON', 'IMAGE_URL', 'URL'],
+        enum: ['STRING', 'NUMBER', 'BOOLEAN', 'COLOR', 'JSON', 'BASE64', 'URL'],
         description: 'Parameter type'
       },
       category: {

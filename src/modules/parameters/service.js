@@ -321,7 +321,24 @@ export default class ParameterService {
                 }
                 break;
 
-            case "IMAGE_URL":
+            case "BASE64":
+                if (typeof value !== "string") {
+                    throw new AppError("Value must be a base64 string", 400);
+                }
+                // Validate base64 data URL format
+                if (!value.startsWith("data:image/")) {
+                    throw new AppError("Value must be a base64 data URL (e.g., data:image/png;base64,...)", 400);
+                }
+                if (!value.includes(";base64,")) {
+                    throw new AppError("Value must contain ';base64,' separator", 400);
+                }
+                // Check if there's actual data after the prefix
+                const base64Data = value.split(";base64,")[1];
+                if (!base64Data || base64Data.length === 0) {
+                    throw new AppError("Base64 data cannot be empty", 400);
+                }
+                break;
+
             case "URL":
                 if (typeof value !== "string") {
                     throw new AppError("Value must be a string URL", 400);

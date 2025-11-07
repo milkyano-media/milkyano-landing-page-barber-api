@@ -24,7 +24,7 @@ enum ParameterType {
   BOOLEAN
   COLOR
   JSON
-  IMAGE_URL
+  BASE64
   URL
 }
 
