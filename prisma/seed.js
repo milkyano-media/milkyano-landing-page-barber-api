@@ -324,10 +324,85 @@ async function main() {
         description: 'Dark mode logo (base64 encoded image)',
         isActive: true
       }
+    }),
+    // Contact parameters (Phase 3.1)
+    prisma.parameter.create({
+      data: {
+        key: 'contact.phone_number',
+        value: '+61 XXX XXX XXX',
+        type: 'STRING',
+        category: 'CONTACT',
+        description: 'Main business phone number',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'contact.email',
+        value: 'info@fadedlines.com',
+        type: 'STRING',
+        category: 'CONTACT',
+        description: 'Primary contact email',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'contact.address',
+        value: '123 Barber Street, Melbourne VIC 3000',
+        type: 'STRING',
+        category: 'CONTACT',
+        description: 'Physical business address',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'contact.business_hours',
+        value: JSON.stringify({
+          "Monday-Friday": "9:00 AM - 6:00 PM",
+          "Saturday": "10:00 AM - 4:00 PM",
+          "Sunday": "Closed"
+        }),
+        type: 'JSON',
+        category: 'CONTACT',
+        description: 'Operating hours by day',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'contact.google_maps_url',
+        value: 'https://maps.google.com/?q=fadedlines+barber',
+        type: 'URL',
+        category: 'CONTACT',
+        description: 'Google Maps location link',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'contact.instagram_url',
+        value: 'https://instagram.com/fadedlines',
+        type: 'URL',
+        category: 'CONTACT',
+        description: 'Instagram profile URL',
+        isActive: true
+      }
+    }),
+    prisma.parameter.create({
+      data: {
+        key: 'contact.facebook_url',
+        value: 'https://facebook.com/fadedlines',
+        type: 'URL',
+        category: 'CONTACT',
+        description: 'Facebook page URL',
+        isActive: true
+      }
     })
   ]);
 
-  console.log(`Created ${parameters.length} parameters (Phase 1 + Phase 2)`);
+  console.log(`Created ${parameters.length} parameters (Phase 1 + Phase 2 + Phase 3.1)`);
 
   console.log('Database seeding completed!');
   console.log('\nNote: These are sample users. In production, users will be created via OTP verification.');
