@@ -148,7 +148,7 @@ async function updateParameterById(request, reply) {
     const parameterService = new ParameterService(this.prisma, this.redis);
 
     try {
-        const parameter = await parameterService.updateParameterById(request.params.id, request.body);
+        const parameter = await parameterService.updateParameterById(+request.params.id, request.body);
         return reply.code(200).send({
             parameter,
             message: "Parameter updated successfully",

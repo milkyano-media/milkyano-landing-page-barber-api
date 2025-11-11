@@ -206,6 +206,13 @@ export default class ParameterService {
             this.validateValueType(updates.value, finalType);
         }
 
+        if (finalType === "JSON") {
+            updates.value = JSON.stringify(updates.value);
+        }
+        if (finalType === "BOOLEAN") {
+            updates.value = updates.value?.toString();
+        }
+
         // Update parameter
         const parameter = await this.prisma.parameter.update({
             where: { id },
@@ -244,24 +251,6 @@ export default class ParameterService {
         await this.invalidateCache();
 
         return parameter;
-    }
-
-    /**
-     * Delete parameter by ID
-     * @param {string} id - Parameter ID
-     * @returns {Promise<void>}
-     */
-    async deleteParameter(id) {
-        // Check if parameter exists
-        await this.getParameterById(id);
-
-        // Delete parameter
-        await this.prisma.parameter.delete({
-            where: { id },
-        });
-
-        // Invalidate cache
-        await this.invalidateCache();
     }
 
     /**

@@ -68,13 +68,6 @@ export default async function parameterRoutes(fastify, opts) {
         handler: updateParameterByKey,
     });
 
-    // Delete parameter - Admin only
-    fastify.delete("/:id", {
-        ...adminOnlyOpts,
-        schema: deleteParameterSchema,
-        handler: deleteParameter,
-    });
-
     fastify.get("/categories", {
         ...adminOnlyOpts,
         handler: getParameterCategories

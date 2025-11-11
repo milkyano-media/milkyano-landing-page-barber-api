@@ -28,34 +28,22 @@ enum ParameterType {
   URL
 }
 
-enum ParameterCategory {
-  THEME
-  BRANDING
-  LAYOUT
-  CONTENT
-  FEATURE_FLAG
-  SEO
-  ANALYTICS
-  CONTACT
-  BOOKING
-}
-
 model User {
-  id                String    @id @default(uuid())
-  squareupId        String?   @unique // Square customer ID
-  role              Role      @default(CUSTOMER)
-  phoneNumber       String?   @unique // Made optional for OAuth users
-  email             String?   @unique
-  firstName         String
-  lastName          String
-  password          String?   // Hashed password (nullable for backward compatibility)
-  isVerified        Boolean   @default(false)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
+  id          String   @id @default(uuid())
+  squareupId  String?  @unique // Square customer ID
+  role        Role     @default(CUSTOMER)
+  phoneNumber String?  @unique // Made optional for OAuth users
+  email       String?  @unique
+  firstName   String
+  lastName    String
+  password    String? // Hashed password (nullable for backward compatibility)
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   // OAuth relationships
-  oauthAccounts     OAuthAccount[]
-  
+  oauthAccounts OAuthAccount[]
+
   @@index([phoneNumber])
   @@index([email])
   @@index([role])
@@ -67,17 +55,17 @@ model OAuthAccount {
   id            String        @id @default(uuid())
   userId        String
   provider      OAuthProvider
-  providerId    String        // OAuth provider's user ID (e.g., Google ID)
-  providerEmail String?       // Email from OAuth provider
-  accessToken   String?       // OAuth access token
-  refreshToken  String?       // OAuth refresh token
-  tokenExpiry   DateTime?     // Token expiration time
+  providerId    String // OAuth provider's user ID (e.g., Google ID)
+  providerEmail String? // Email from OAuth provider
+  accessToken   String? // OAuth access token
+  refreshToken  String? // OAuth refresh token
+  tokenExpiry   DateTime? // Token expiration time
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  
+
   // Relations
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([provider, providerId])
   @@index([userId])
   @@index([provider])
@@ -85,15 +73,15 @@ model OAuthAccount {
 }
 
 model Parameter {
-  id          String            @id @default(uuid())
-  key         String            @unique
-  value       Json              // Flexible storage for any value type
+  id          Int           @id @default(autoincrement())
+  key         String        @unique
+  value       String?
   type        ParameterType
-  category    ParameterCategory
+  category    String
   description String?
-  isActive    Boolean           @default(true)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   @@index([category])
   @@index([isActive])
