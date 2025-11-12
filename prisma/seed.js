@@ -155,31 +155,11 @@ async function main() {
         // Phase 2: Additional Theme Colors
         prisma.parameter.create({
             data: {
-                key: "theme.secondary_color",
-                value: "#ffffff",
-                type: "COLOR",
-                category: "THEME",
-                description: "Secondary accent color",
-                isActive: true,
-            },
-        }),
-        prisma.parameter.create({
-            data: {
                 key: "theme.background_color",
                 value: "#000000",
                 type: "COLOR",
                 category: "THEME",
                 description: "Main background color",
-                isActive: true,
-            },
-        }),
-        prisma.parameter.create({
-            data: {
-                key: "theme.card_background_color",
-                value: "#0a0a0a",
-                type: "COLOR",
-                category: "THEME",
-                description: "Card and panel background color",
                 isActive: true,
             },
         }),
