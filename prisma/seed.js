@@ -77,7 +77,7 @@ async function main() {
                 type: "BOOLEAN",
                 category: "FEATURE_FLAG",
                 description: "Master switch for booking system",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -87,7 +87,7 @@ async function main() {
                 type: "BOOLEAN",
                 category: "FEATURE_FLAG",
                 description: "Show promotional banner on homepage",
-                isActive: true,
+                isActive: false,
             },
         }),
         // Content parameters
@@ -98,7 +98,7 @@ async function main() {
                 type: "STRING",
                 category: "CONTENT",
                 description: "Main homepage headline",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -108,7 +108,7 @@ async function main() {
                 type: "STRING",
                 category: "CONTENT",
                 description: "Homepage subheadline",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -118,7 +118,7 @@ async function main() {
                 type: "STRING",
                 category: "CONTENT",
                 description: "Primary call-to-action button text",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -128,7 +128,7 @@ async function main() {
                 type: "STRING",
                 category: "CONTENT",
                 description: "Rotating promotional banner message",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -138,7 +138,7 @@ async function main() {
                 type: "STRING",
                 category: "CONTENT",
                 description: "Urgent announcements (closures, etc.)",
-                isActive: true,
+                isActive: false,
             },
         }),
         // Theme parameter
@@ -149,7 +149,7 @@ async function main() {
                 type: "COLOR",
                 category: "THEME",
                 description: "Brand primary color (that distinctive green)",
-                isActive: true,
+                isActive: false,
             },
         }),
         // Phase 2: Additional Theme Colors
@@ -160,7 +160,7 @@ async function main() {
                 type: "COLOR",
                 category: "THEME",
                 description: "Main background color",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -170,7 +170,7 @@ async function main() {
                 type: "COLOR",
                 category: "THEME",
                 description: "Border color (stone-800)",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -180,7 +180,7 @@ async function main() {
                 type: "COLOR",
                 category: "THEME",
                 description: "Primary text color",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -190,7 +190,17 @@ async function main() {
                 type: "COLOR",
                 category: "THEME",
                 description: "Secondary text color (gray-400)",
-                isActive: true,
+                isActive: false,
+            },
+        }),
+        prisma.parameter.create({
+            data: {
+                key: "theme.shadow_color",
+                value: "#33ff00",
+                type: "COLOR",
+                category: "THEME",
+                description: "The subtle shadow",
+                isActive: false,
             },
         }),
         // Phase 2: Additional Content Parameters
@@ -201,7 +211,7 @@ async function main() {
                 type: "STRING",
                 category: "CONTENT",
                 description: "Booking confirmation page title",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -211,7 +221,7 @@ async function main() {
                 type: "STRING",
                 category: "CONTENT",
                 description: "Booking confirmation page message",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -221,7 +231,7 @@ async function main() {
                 type: "STRING",
                 category: "CONTENT",
                 description: "About page main headline",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -231,7 +241,34 @@ async function main() {
                 type: "STRING",
                 category: "CONTENT",
                 description: "Footer tagline/slogan",
-                isActive: true,
+                isActive: false,
+            },
+        }),
+        prisma.parameter.create({
+            data: {
+                key: "content.faqs",
+                value: JSON.stringify([
+                    {
+                        question: "What services do you offer?",
+                        answer: `We specialize in all types of hair textures and offer men's haircuts starting from $50, and haircut & beard trims starting from $75 (depending on your chosen barber). We provide traditional styled & dapper haircuts, smooth razor shaves, and close fades in a clean & safe environment.`,
+                    },
+                    {
+                        question: "Where are you located and how can I contact you?",
+                        answer: `We're located at 55 Portman St, Oakleigh VIC 3166, Australia. You can contact us via phone at +6135 249 543, email us at dejan@fadedlinesbarbershop.com, or follow us on Instagram @fadedlinesbarbershop for updates and our latest work.`,
+                    },
+                    {
+                        question: "Do you accept walk-ins or appointments only?",
+                        answer: `Faded Lines Barbershop offers both appointments and walk-ins to bring convenience back into people's lives. We recommend booking an appointment for guaranteed service times, but we also welcome walk-ins based on availability. Our pricing is determined by demand and the experience level of your chosen barber.`,
+                    },
+                    {
+                        question: "What makes Faded Lines Barbershop special?",
+                        answer: `We're an award-winning barbershop that provides great services at a professional standard. Our team is committed to making clients feel welcome in a clean & safe environment. We've served over 5000+ happy customers and are well-known on TikTok for our quality work. Our goal is to ensure you leave feeling confident with every visit.`,
+                    },
+                ]),
+                type: "JSON",
+                category: "CONTENT",
+                description: "Frequently Asked Questions",
+                isActive: false,
             },
         }),
         // Phase 2: Branding Parameters
@@ -242,7 +279,7 @@ async function main() {
                 type: "STRING",
                 category: "BRANDING",
                 description: "Company name",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -252,7 +289,7 @@ async function main() {
                 type: "STRING",
                 category: "BRANDING",
                 description: "Main company tagline",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -262,7 +299,7 @@ async function main() {
                 type: "BASE64",
                 category: "BRANDING",
                 description: "Main logo (base64 encoded image)",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -272,7 +309,7 @@ async function main() {
                 type: "BASE64",
                 category: "BRANDING",
                 description: "Dark mode logo (base64 encoded image)",
-                isActive: true,
+                isActive: false,
             },
         }),
         // Contact parameters (Phase 3.1)
@@ -283,7 +320,7 @@ async function main() {
                 type: "STRING",
                 category: "CONTACT",
                 description: "Main business phone number",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -293,7 +330,7 @@ async function main() {
                 type: "STRING",
                 category: "CONTACT",
                 description: "Primary contact email",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -303,7 +340,7 @@ async function main() {
                 type: "STRING",
                 category: "CONTACT",
                 description: "Physical business address",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -317,7 +354,7 @@ async function main() {
                 type: "JSON",
                 category: "CONTACT",
                 description: "Operating hours by day",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -327,7 +364,7 @@ async function main() {
                 type: "URL",
                 category: "CONTACT",
                 description: "Google Maps location link",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -337,7 +374,7 @@ async function main() {
                 type: "URL",
                 category: "CONTACT",
                 description: "Instagram profile URL",
-                isActive: true,
+                isActive: false,
             },
         }),
         prisma.parameter.create({
@@ -347,7 +384,7 @@ async function main() {
                 type: "URL",
                 category: "CONTACT",
                 description: "Facebook page URL",
-                isActive: true,
+                isActive: false,
             },
         }),
     ]);
