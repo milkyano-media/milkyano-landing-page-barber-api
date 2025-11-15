@@ -38,6 +38,7 @@ Thumbs.db
 
 # Dev Junk
 .claude
+CLAUDE.md
 redis
 redis-7.2.4-windows.zip
 redis-windows.zip

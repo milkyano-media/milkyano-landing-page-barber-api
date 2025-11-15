@@ -49,7 +49,6 @@ export default async function parameterRoutes(fastify, opts) {
 
     // Get parameter by key - Admin only
     fastify.get("/key/:key", {
-        ...adminOnlyOpts,
         schema: getParameterByKeySchema,
         handler: getParameterByKey,
     });

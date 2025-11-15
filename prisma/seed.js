@@ -246,6 +246,131 @@ async function main() {
         }),
         prisma.parameter.create({
             data: {
+                key: "content.cut_gallery",
+                value: JSON.stringify([
+                    {
+                        url: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/gallery/1.png",
+                        alt: "High Skin Fade by Josh",
+                    },
+                    {
+                        url: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/gallery/2.png",
+                        alt: "High Skin Fade by Josh",
+                    },
+                    {
+                        url: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/gallery/3.png",
+                        alt: "High Skin Fade by Emman",
+                    },
+                    {
+                        url: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/gallery/4.png",
+                        alt: "Low Taper by Emman",
+                    },
+                    {
+                        url: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/gallery/5.png",
+                        alt: "Mid to High Burst Fade by Emman",
+                    },
+                    {
+                        url: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/gallery/6.png",
+                        alt: "High Drop Fade by Emman",
+                    },
+                    {
+                        url: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/gallery/7.png",
+                        alt: "Mid to High by Josh",
+                    },
+                    {
+                        url: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/gallery/8.png",
+                        alt: "High Skin Fade by Christos",
+                    },
+                    {
+                        url: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/gallery/9.png",
+                        alt: "Burst Fade by Emman",
+                    },
+                    {
+                        url: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/gallery/10.png",
+                        alt: "High Skin Fade by Christos",
+                    },
+                    {
+                        url: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/gallery/11.png",
+                        alt: "High Taper Fade by Christos",
+                    },
+                    {
+                        url: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/gallery/12.png",
+                        alt: "Low Drop Fade by Christos",
+                    },
+                ]),
+                type: "JSON",
+                category: "CONTENT",
+                description: "Show off your cuts",
+                isActive: false,
+            },
+        }),
+        prisma.parameter.create({
+            data: {
+                key: "content.barber_list",
+                value: JSON.stringify([
+                    {
+                        imageUrl: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/barbers/amir.png",
+                        link: "/amir",
+                        landing: false,
+                    },
+                    {
+                        imageUrl: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/barbers/rayhan.png",
+                        link: "/rayhan",
+                        landing: false,
+                    },
+                    {
+                        imageUrl: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/barbers/anthony.png",
+                        link: "/anthony",
+                        landing: false,
+                    },
+                    {
+                        imageUrl: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/barbers/josh.png",
+                        link: "/josh",
+                        landing: false,
+                    },
+                    {
+                        imageUrl: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/barbers/noah.png",
+                        link: "/noah",
+                        landing: false,
+                    },
+                    {
+                        imageUrl: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/barbers/jay.png",
+                        link: "/jay",
+                        landing: false,
+                    },
+                    {
+                        imageUrl: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/barbers/wyatt-swick.png",
+                        link: "/wyatt",
+                        landing: false,
+                    },
+                    {
+                        imageUrl: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/barbers/emman.png",
+                        link: "/emman",
+                        landing: false,
+                    },
+                    {
+                        imageUrl: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/barbers/christos.png",
+                        link: "/christos",
+                        landing: false,
+                    },
+                    {
+                        imageUrl: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/barbers/niko.png",
+                        link: "/niko",
+                        landing: false,
+                    },
+                    {
+                        imageUrl: "https://s3.milkyano.com/milkyano/fadedlines-oakleigh/barbers/dejan.png",
+                        link: "/dejan",
+                        landing: false,
+                    },
+                ]),
+                type: "JSON",
+                category: "CONTENT",
+                description: "List all the barber on barbers page",
+                isActive: false,
+            },
+        }),
+        prisma.parameter.create({
+            data: {
                 key: "content.faqs",
                 value: JSON.stringify([
                     {
