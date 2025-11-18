@@ -19,6 +19,8 @@ import squareRoutes from './modules/square/routes.js';
 import customerRoutes from './modules/customers/routes.js';
 import cacheRoutes from './modules/cache/routes.js';
 import parameterRoutes from './modules/parameters/routes.js';
+import barberRoutes from './modules/barbers/routes.js';
+import galleryRoutes from './modules/gallery-management/routes.js';
 
 // Logger configuration
 function createLoggerConfig() {
@@ -122,7 +124,9 @@ export default function build(opts = {}) {
         { name: 'square', description: 'Square API integration' },
         { name: 'customers', description: 'Customer management' },
         { name: 'cache', description: 'Cache management (Admin only)' },
-        { name: 'parameters', description: 'Parameter system management (Admin only)' }
+        { name: 'parameters', description: 'Parameter system management (Admin only)' },
+        { name: 'barbers', description: 'Barber management (Admin only)' },
+        { name: 'gallery', description: 'Gallery management (Admin only)' }
       ]
     }
   });
@@ -139,6 +143,8 @@ export default function build(opts = {}) {
     apiInstance.register(customerRoutes, { prefix: '/customers' });
     apiInstance.register(cacheRoutes, { prefix: '/cache' });
     apiInstance.register(parameterRoutes, { prefix: '/parameters' });
+    apiInstance.register(barberRoutes, { prefix: '/barber-management' });
+    apiInstance.register(galleryRoutes, { prefix: '/gallery-management' });
 
     done();
   }, { prefix: '/api/v1' });

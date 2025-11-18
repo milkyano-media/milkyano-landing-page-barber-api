@@ -88,3 +88,33 @@ model Parameter {
   @@index([key])
   @@map("parameters")
 }
+
+model Barber {
+  id          String   @id @default(uuid())
+  name        String
+  displayName String
+  imageBase64 String   @db.Text
+  redirectUrl String
+  hasLanding  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("barbers")
+}
+
+model GalleryItem {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  imageBase64 String   @db.Text
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("gallery_items")
+}
