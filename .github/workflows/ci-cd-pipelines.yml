@@ -44,4 +44,8 @@ jobs:
         username: ${{ secrets.USER }}
         key: ${{ secrets.PIPELINE_PRIVATE_KEY }}
         port: 22
-        script: whoami
+        script: |
+          docker pull milkyano/fadedlines-bentleigh:latest
+          docker stop fadedlines-bentleigh || true
+          docker rm fadedlines-bentleigh || true
+          docker run -d --name fadedlines-bentleigh -p 80:3009 milkyano/fadedlines-bentleigh:latest
