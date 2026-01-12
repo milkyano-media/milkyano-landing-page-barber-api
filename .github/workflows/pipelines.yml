@@ -73,13 +73,13 @@ jobs:
           port: 22
           script: |
             docker pull milkyano/fadedlines-bentleigh:latest
-            docker stop fadedlines-bentleigh || true
-            docker rm fadedlines-bentleigh || true
+            docker stop fadedlines-bentleigh-api || true
+            docker rm fadedlines-bentleigh-api || true
             docker run -d \
               -p 80:8083 \
-              --env-file /opt/fadedlines-bentleigh/.env \
+              --env-file /opt/fadedline-branch-api/.env \
               --network fadedline-api_fadedline-network \
               --restart unless-stopped \
-              --name fadedlines-bentleigh \
+              --name fadedlines-bentleigh-api \
               milkyano/fadedlines-bentleigh:latest
-            docker logs --tail 50 fadedlines-bentleigh
+            docker logs --tail 50 fadedlines-bentleigh-api
