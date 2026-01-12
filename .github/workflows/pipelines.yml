@@ -76,7 +76,7 @@ jobs:
             docker stop fadedlines-bentleigh-api || true
             docker rm fadedlines-bentleigh-api || true
             docker run -d \
-              -p 80:8083 \
+              -p 8083:8083 \
               --env-file /opt/fadedline-branch-api/.env \
               --network fadedline-api_fadedline-network \
               --restart unless-stopped \
