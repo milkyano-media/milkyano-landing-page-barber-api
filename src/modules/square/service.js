@@ -394,11 +394,17 @@ export default class SquareService {
    */
   async findCustomerByEmailAndPhone(email, phone) {
     try {
+      // Ensure phone is in E.164 format (must have leading +)
+      const formattedPhone = phone && !phone.startsWith('+') ? `+${phone}` : phone;
+
       // First try to search by email
+      // Square API requires query wrapper for filter
       const emailSearchBody = {
-        filter: {
-          email_address: {
-            exact: email
+        query: {
+          filter: {
+            email_address: {
+              exact: email
+            }
           }
         }
       };
@@ -406,37 +412,39 @@ export default class SquareService {
       console.log('Searching for customer with email:', email);
       const emailResponse = await this.client.post('/customers/search', emailSearchBody);
       const customersByEmail = emailResponse.data.customers || [];
-      
+
       // If we found customers by email, check if any match the phone number
       if (customersByEmail.length > 0) {
-        const matchingCustomer = customersByEmail.find(customer => 
-          customer.phone_number === phone
+        const matchingCustomer = customersByEmail.find(customer =>
+          customer.phone_number === formattedPhone
         );
-        
+
         if (matchingCustomer) {
           console.log('Found customer matching both email and phone');
           return matchingCustomer;
         }
       }
-      
+
       // If no match found by email+phone, try searching by phone
       const phoneSearchBody = {
-        filter: {
-          phone_number: {
-            exact: phone
+        query: {
+          filter: {
+            phone_number: {
+              exact: formattedPhone
+            }
           }
         }
       };
-      
-      console.log('Searching for customer with phone:', phone);
+
+      console.log('Searching for customer with phone:', formattedPhone);
       const phoneResponse = await this.client.post('/customers/search', phoneSearchBody);
       const customersByPhone = phoneResponse.data.customers || [];
-      
+
       // Check if any match the email
-      const matchingCustomer = customersByPhone.find(customer => 
+      const matchingCustomer = customersByPhone.find(customer =>
         customer.email_address === email
       );
-      
+
       return matchingCustomer || null;
     } catch (error) {
       console.error('Square findCustomer error:', error.response?.data || error.message);
