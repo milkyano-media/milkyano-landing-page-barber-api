@@ -351,7 +351,7 @@ async function findCustomer(request, reply) {
 
   try {
     const { email, phone } = request.query;
-    
+
     if (!email || !phone) {
       return reply.code(400).send({
         error: "Email and phone are required"
@@ -359,14 +359,16 @@ async function findCustomer(request, reply) {
     }
 
     const customer = await squareService.findCustomerByEmailAndPhone(email, phone);
-    
-    if (!customer) {
-      return reply.code(404).send({
-        error: "Customer not found"
-      });
-    }
 
-    return reply.code(200).send({ customer });
+    // Return 200 with customer object (null if not found)
+    // Frontend expects to check customer?.id to determine if new customer
+    return reply.code(200).send({
+      id: customer?.id || null,
+      given_name: customer?.given_name || null,
+      family_name: customer?.family_name || null,
+      email_address: customer?.email_address || null,
+      phone_number: customer?.phone_number || null
+    });
   } catch (error) {
     request.log.error(error);
 

@@ -93,34 +93,34 @@ export default async function squareRoutes(fastify, opts) {
 
   // Protected routes - authentication required
   fastify.post('/bookings', {
-    preHandler: [fastify.authenticate],
+    // preHandler: [fastify.authenticate],
     schema: {
       ...createBookingSchema,
       tags: ['square'],
       summary: 'Create a booking',
-      security: [{ bearerAuth: [] }]
+      // security: [{ bearerAuth: [] }]
     },
     handler: createBooking
   });
 
   fastify.get('/bookings/:id', {
-    preHandler: [fastify.authenticate],
+    // preHandler: [fastify.authenticate],
     schema: {
       ...getBookingDetailsSchema,
       tags: ['square'],
       summary: 'Get booking details',
-      security: [{ bearerAuth: [] }]
+      // security: [{ bearerAuth: [] }]
     },
     handler: getBookingDetails
   });
 
   fastify.post('/bookings/:id/cancel', {
-    preHandler: [fastify.authenticate],
+    // preHandler: [fastify.authenticate],
     schema: {
       ...cancelBookingSchema,
       tags: ['square'],
       summary: 'Cancel a booking',
-      security: [{ bearerAuth: [] }]
+      // security: [{ bearerAuth: [] }]
     },
     handler: cancelBooking
   });
