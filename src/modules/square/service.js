@@ -99,12 +99,13 @@ export default class SquareService {
         searchText = filter;
       }
 
-      // Build search request
+      // Build search request - fetch all services with "By" keyword
+      // Don't include type in search to avoid case sensitivity issues
       const requestBody = {
         object_types: ['ITEM'],
         query: {
           text_query: {
-            keywords: type ? [`${searchText} (${type})`] : [searchText]
+            keywords: [searchText]
           }
         }
       };
@@ -114,11 +115,16 @@ export default class SquareService {
 
       let services = response.data.objects || [];
 
-      // Filter by type if specified
+      // Filter by type if specified (case-insensitive)
+      // Bentleigh uses type "O" - this will match both "(O)" and "(o)"
       if (type) {
-        services = services.filter(item => 
-          item.item_data?.name?.includes(`(${type})`)
-        );
+        const typeUpper = type.toUpperCase();
+        const typeLower = type.toLowerCase();
+        services = services.filter(item => {
+          const name = item.item_data?.name || '';
+          // Match both uppercase and lowercase variants
+          return name.includes(`(${typeUpper})`) || name.includes(`(${typeLower})`);
+        });
       }
 
       // Only include appointment services

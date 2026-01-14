@@ -78,13 +78,34 @@ export default function build(opts = {}) {
   
   const app = fastify(options);
 
-  // Configure CORS
-  const corsOrigins = process.env.CORS_ORIGINS?.split(',') || ['http://localhost:5173'];
+  // Configure CORS - Parse and trim origins with fallback defaults
+  const corsOrigins = (process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS)
+    ?.split(',')
+    .map(origin => origin.trim()) || [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://localhost:8800'
+    ];
+
   app.register(cors, {
     origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-api-key',         // CRITICAL: Frontend uses lowercase 'x-api-key'
+      'X-API-Key',         // Also support uppercase variant
+      'X-Requested-With',
+      'Accept'
+    ],
+    exposedHeaders: ['Referrer-Policy', 'Content-Length', 'X-Request-Id'],
+    maxAge: 86400 // 24 hours preflight cache
+  });
+
+  // Add Referrer-Policy header for localhost testing
+  app.addHook('onRequest', async (request, reply) => {
+    reply.header('Referrer-Policy', 'no-referrer-when-downgrade');
   });
 
   // Register plugins
