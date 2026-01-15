@@ -293,9 +293,9 @@ async function cancelBooking(request, reply) {
     // First get booking details to verify ownership
     const booking = await squareService.getBookingDetails(request.params.id);
 
-    // For customers, only allow canceling their own bookings
+    // For authenticated customers, only allow canceling their own bookings
     if (
-      request.user.role === "CUSTOMER" &&
+      request.user?.role === "CUSTOMER" &&
       booking.customerId !== request.user.id
     ) {
       return reply.code(403).send({
