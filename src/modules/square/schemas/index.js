@@ -368,11 +368,10 @@ export const cancelBookingSchema = {
   },
   body: {
     type: 'object',
-    required: ['bookingVersion'],
     properties: {
-      bookingVersion: { 
+      bookingVersion: {
         type: 'number',
-        description: 'Version number for optimistic concurrency control'
+        description: 'Optional version number for optimistic concurrency control'
       }
     }
   },

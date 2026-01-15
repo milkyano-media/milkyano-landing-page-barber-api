@@ -341,15 +341,13 @@ export default class SquareService {
   /**
    * Cancel a booking
    * @param {string} bookingId - Booking ID
-   * @param {number} bookingVersion - Booking version for optimistic concurrency
+   * @param {number} [bookingVersion] - Optional booking version for optimistic concurrency
    * @returns {Promise<Object>} Cancelled booking
    */
   async cancelBooking(bookingId, bookingVersion) {
     try {
-      const requestBody = {
-        booking_version: bookingVersion
-      };
-      
+      const requestBody = bookingVersion ? { booking_version: bookingVersion } : {};
+
       const response = await this.client.post(`/bookings/${bookingId}/cancel`, requestBody);
       const booking = response.data.booking;
       
