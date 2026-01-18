@@ -115,17 +115,17 @@ export default class SquareService {
 
       let services = response.data.objects || [];
 
-      // Filter by type if specified (case-insensitive)
-      // Bentleigh uses type "O" - this will match both "(O)" and "(o)"
-      if (type) {
-        const typeUpper = type.toUpperCase();
-        const typeLower = type.toLowerCase();
-        services = services.filter(item => {
-          const name = item.item_data?.name || '';
-          // Match both uppercase and lowercase variants
-          return name.includes(`(${typeUpper})`) || name.includes(`(${typeLower})`);
-        });
-      }
+      // DISABLED: Filter by type - now showing all items without "(O)" filter
+      // Previously filtered services by type "(O)" for Bentleigh
+      // if (type) {
+      //   const typeUpper = type.toUpperCase();
+      //   const typeLower = type.toLowerCase();
+      //   services = services.filter(item => {
+      //     const name = item.item_data?.name || '';
+      //     // Match both uppercase and lowercase variants
+      //     return name.includes(`(${typeUpper})`) || name.includes(`(${typeLower})`);
+      //   });
+      // }
 
       // Only include appointment services
       services = services.filter(item => 
